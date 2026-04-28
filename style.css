@@ -1,0 +1,131 @@
+ 
+ body {
+  margin: 0;
+  height: 100vh;
+  background: url("pictures/Menu.png");
+  background-size: cover;        /*  <==ZWYKLY obrazek */
+  background-position: center;
+  font-family: monospace;
+} 
+
+
+/* Bardzo FAJNY FILMIK */
+body {
+  margin: 0;
+  height: 100vh;
+  font-family: monospace;
+}
+
+#bgVideo {
+  position: fixed;  /* фиксирует на весь экран */
+
+  top: 0;
+  left: 0;
+
+  width: 100%;
+  height: 100%;
+
+  object-fit: cover;  /* расстягивает без искажений */
+
+  z-index: -1;  /* ПОЗАДИ ИНТЕРФЕЙСА */
+
+/* filter: brightness(0.6); */
+}
+
+
+/* ОБЩИЙ КОНТЕЙНЕР */
+.wrapper {
+  height: 100vh;
+  padding: 40px;
+  box-sizing: border-box;
+
+  display: flex;          /* ВАЖНО */
+  align-items: flex-start; /* чтобы не центрировалась по вертикали */
+}
+
+/* ЛЕВАЯ ПАНЕЛЬ */
+.menu {
+  position: fixed;          /* ← ключевой момент */
+  top: 0px;                /* отступ сверху */
+  left: 150px;               /* отступ слева */
+
+  width: 220px;
+  height: calc(100vh - 80px); /* чтобы был отступ и снизу */
+
+  background: rgba(120, 0, 0, 0.45);
+  backdrop-filter: blur(4px); /* еффект стекла (прозрачность)*/
+
+  padding: 50px 30px;
+  color: white;
+}
+
+/* заголовок */
+.title {
+  margin-bottom: 200px;
+  font-size: 28px;
+  text-align: center;
+}
+
+/* пункты */
+.menu-items {
+  display: flex;
+  flex-direction: column;
+  gap: 25px;
+  text-align: center;
+}
+
+.menu-item {
+  padding: 10px;
+  cursor: pointer;
+  font-size: 20px;
+}
+
+.menu-item:hover {
+  outline: 1.5px solid white;
+}
+
+/* экраны справа */
+.screen {
+  display: none;
+  position: fixed;
+  top: 200px;
+  left: 580px; /* правее панели */
+  right: 40px;
+  bottom: 40px;
+
+  color: white;
+  
+}
+
+.screen div{
+    color: white;
+}
+/* активный экран */
+.screen.active {
+  display: block;
+  padding: 20px;
+}
+
+/* кнопки выбора */
+.choices {
+  margin-top: 40px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.choice {
+  width: 200px;
+  padding: 10px;
+  cursor: pointer;
+}
+
+.choice:hover {
+  outline: 1.5px solid white;
+}
+
+.description {
+    font-size: 20px;
+    line-height: 1.4;
+    opacity: 0.8;
+}

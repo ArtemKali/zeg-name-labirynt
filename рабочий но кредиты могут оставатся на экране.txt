@@ -1,0 +1,183 @@
+const menu = document.getElementById("menu");
+const screen = document.getElementById("screen");
+
+const music = new Audio("sounds/aruarian.mp3");
+music.loop = true;
+
+const mapBackgrounds = {
+  Castle: "videos/Castle.mp4",
+  Desert: "video/Desert.mp4",
+  Jungle: "videos/Jungle.mp4"
+};
+
+const difficultyData = {
+  Peaceful: { emoji: "😌", desc: "Relax mode without enemies. Just chill gameplay." },
+  Normal: { emoji: "🙂", desc: "Balanced difficulty. Standard experience." },
+  Hard: { emoji: "😈", desc: "Enemies are stronger. You will suffer." },
+  Expert: { emoji: "💀", desc: "I wanna see how you will cry. Good luck." }
+};
+
+let selectedMap = null;
+
+/* ================= SCREEN SYSTEM ================= */
+function showScreen(content) {
+  screen.innerHTML = "";
+  screen.style.display = "block";
+  screen.classList.add("active");
+  screen.appendChild(content);
+}
+
+function hideScreen() {
+  screen.innerHTML = "";
+  screen.style.display = "none";
+  screen.classList.remove("active");
+}
+
+/* ================= MENUS ================= */
+const menus = {
+  main: [
+    { text: "New Game", action: () => setMenu("map") },
+    { text: "Continue", action: () => console.log("Continue") },
+    { text: "Settings", action: () => setMenu("settings") },
+    { text: "Credits", action: () => setMenu("credits") }
+  ],
+
+  map: [
+    { text: "Castle", action: () => { selectedMap = "castle"; setMenu("difficulty"); } },
+    { text: "Desert", action: () => { selectedMap = "desert"; setMenu("difficulty"); } },
+    { text: "Jungle", action: () => { selectedMap = "jungle"; setMenu("difficulty"); } },
+    { text: "Back", action: () => setMenu("main") }
+  ],
+
+  difficulty: [
+    { text: "Peaceful", action: () => startGame("easy") },
+    { text: "Normal", action: () => startGame("normal") },
+    { text: "Hard", action: () => startGame("hard") },
+    { text: "Expert", action: () => startGame("expert") },
+    { text: "Back", action: () => setMenu("map") }
+  ],
+
+  settings: [
+    { text: "Music volume", action: () => console.log("volume") },
+    { text: "Controls", action: () => console.log("controls") },
+    { text: "Back", action: () => setMenu("main") }
+  ],
+
+  credits: [
+    { text: "Show Credits", action: showCredits },
+    { text: "Back", action: () => setMenu("main") }
+  ]
+};
+
+/* ================= MENU ================= */
+function setMenu(name) {
+  menu.innerHTML = "";
+  const bgVideo = document.getElementById("bgVideo");
+
+  menus[name].forEach(item => {
+    const div = document.createElement("div");
+    div.className = "menu-item";
+    div.textContent = item.text;
+
+    div.onclick = item.action;
+
+    /* ===== DIFFICULTY HOVER ===== */
+    if (name === "difficulty") {
+      div.addEventListener("mouseenter", () => {
+        const data = difficultyData[item.text];
+        if (!data) return;
+
+        const box = document.createElement("div");
+        box.style.display = "flex";
+        box.style.alignItems = "center";
+        box.style.gap = "15px";
+        box.style.padding = "15px";
+        box.style.background = "rgba(0,0,0,0.6)";
+        box.style.borderRadius = "10px";
+        box.style.color = "white";
+
+        const icon = document.createElement("div");
+        icon.textContent = data.emoji;
+        icon.style.fontSize = "40px";
+
+        const text = document.createElement("div");
+
+        const title = document.createElement("div");
+        title.textContent = item.text;
+        title.style.fontSize = "22px";
+
+        const desc = document.createElement("div");
+        desc.textContent = data.desc;
+        desc.style.opacity = "0.8";
+
+        text.appendChild(title);
+        text.appendChild(desc);
+
+        box.appendChild(icon);
+        box.appendChild(text);
+
+        showScreen(box);
+      });
+
+      div.addEventListener("mouseleave", hideScreen);
+    }
+
+    /* ===== MAP VIDEO ===== */
+    div.onmouseenter = () => {
+      if (name === "map" && mapBackgrounds[item.text]) {
+        bgVideo.src = mapBackgrounds[item.text];
+      }
+    };
+
+    div.onmouseleave = () => {
+      if (name === "map") bgVideo.src = "menu.mp4";
+    };
+
+    menu.appendChild(div);
+  });
+}
+
+/* ================= CREDITS ================= */
+function showCredits() {
+  const box = document.createElement("div");
+  box.style.padding = "20px";
+  box.style.background = "rgba(0,0,0,0.6)";
+  box.style.color = "white";
+  box.style.whiteSpace = "pre-line";
+
+  box.textContent = `
+Name: Project Z
+
+Gameplay: ArtemKali, Toburetko
+Game designer: Toburetko
+
+JavaScript: ArtemKali, Toburetko
+HTML: Toburetko, ArtemKali
+CSS: Toburetko, ArtemKali
+
+Music:
+Nujabes - Aruarian dance
+
+Thx for playing!
+`;
+
+  showScreen(box);
+}
+
+/* ================= START ================= */
+function startGame(difficulty) {
+  console.log("Map:", selectedMap);
+  console.log("Difficulty:", difficulty);
+}
+
+/* ================= MUSIC FIX ================= */
+let musicStarted = false;
+
+document.addEventListener("click", () => {
+  if (!musicStarted) {
+    music.play().catch(() => {});
+    musicStarted = true;
+  }
+});
+
+setMenu("main");
