@@ -1,4 +1,5 @@
 import { levels } from "./maps.js";
+import { Camera } from "./camera.js"; // Импортируем камеру
 
 window.addEventListener("DOMContentLoaded", () => {
 
@@ -27,7 +28,7 @@ window.addEventListener("DOMContentLoaded", () => {
       easy: 0, // 1
       normal: 1, // 2
       hard: 2, // 3
-      expert: 3  // 4
+      expert: 3  // 4 
     },
     Jungle: {
       easy: 4,
@@ -43,12 +44,7 @@ window.addEventListener("DOMContentLoaded", () => {
     }
   };
 
-
-
-  // const levels = [map1, map2, map3, map4, map5, map6, map7, map8];
-
-
-  // WYBOR POZIOMU
+  ////////////= WYBOR POZIOMU =\\\\\\\\\\\\\
   let currentLevel = LEVEL_CONFIG[mapName]?.[difficulty] ?? 0;
 
   function cloneLevel(levelIndex) {
@@ -71,13 +67,26 @@ window.addEventListener("DOMContentLoaded", () => {
     return;
   }
 
-  const tileSize = 14;
+  
+  const tileSize = 64;
 
-  let player = { x: 0, y: 0 };
+  // Инициализация игрока с дополнительными полями для плавности
+  let player = { 
+    x: 0, 
+    y: 0, 
+    pixelX: 0, // Визуальная позиция по X
+    pixelY: 0  // Визуальная позиция по Y
+  };
 
+  // Инициализация камеры
+  let camera = new Camera(
+    canvas.width, 
+    canvas.height, 
+    map[0].length * tileSize, 
+    map.length * tileSize
+  );
 
-
-  let enemies = [];     ////////////////////////////// ENMEIES ////////////////////////////
+  let enemies = [];     ////////////////////////////// ENMEIES \\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
 
 function spawnEnemies() {
   enemies = [];
@@ -116,6 +125,9 @@ function spawnEnemies() {
         if (map[y][x] === 3) {
           player.x = x;
           player.y = y;
+          // Устанавливаем начальную пиксельную позицию
+          player.pixelX = x * tileSize;
+          player.pixelY = y * tileSize;
           return;
         }
       }
@@ -133,6 +145,12 @@ function spawnEnemies() {
     hasKey = false;
     findStart();
     spawnEnemies();
+
+
+    if (camera) {
+        camera.mapWidth = map[0].length * tileSize;
+        camera.mapHeight = map.length * tileSize;
+    }
   }
 
   findStart();
@@ -176,38 +194,44 @@ function spawnEnemies() {
   });
 
   let moveDelay = 0;
-  let moveSpeed = 7;
 
   function updateMovement() {
     moveDelay++;
 
-    let interval = 8; // szybkosc (wiecej = wolniej)
+    let interval = 8; // szybkosc gracza (wiecej = wolniej)
 
     if (keys["ShiftLeft"] || keys["ShiftRight"]) {
-      interval = 6; // ускорение
+      interval = 6; // przyspieszenie
     }
 
-    if (moveDelay < interval) return;
-    moveDelay = 0;
+    if (moveDelay >= interval) {
+        moveDelay = 0;
 
-    let newX = player.x;
-    let newY = player.y;
+        let newX = player.x;
+        let newY = player.y;
 
-    if (keys["KeyW"]) newY--;
-    else if (keys["KeyS"]) newY++;
-    else if (keys["KeyA"]) newX--;
-    else if (keys["KeyD"]) newX++;
+        if (keys["KeyW"]) newY--;
+        else if (keys["KeyS"]) newY++;
+        else if (keys["KeyA"]) newX--;
+        else if (keys["KeyD"]) newX++;
 
-    if (newX !== player.x || newY !== player.y) {
-      movePlayer(newX, newY);
+        if (newX !== player.x || newY !== player.y) {
+          movePlayer(newX, newY);
+        }
     }
+
+    ///////////////////////////// LOGIKA PŁYNNOŚCI: przyciągamy pozycję pikseli do siatki ///////////////////////////////////
+
+    let lerpSpeed = 0.25; /////// szybkosc plynnosci
+    player.pixelX += (player.x * tileSize - player.pixelX) * lerpSpeed;
+    player.pixelY += (player.y * tileSize - player.pixelY) * lerpSpeed;
   }
 
-  function updateEnemies() {                      //////////////////// RUCH ENEMIES ////////////////////
+  function updateEnemies() {                  //////////////////// RUCH ENEMEIES ////////////////////
   for (let enemy of enemies) {
 
     enemy.delay++;
-    if (enemy.delay < 7) continue; // скорость (больше = медленнее)
+    if (enemy.delay < 7) continue; // szybkosc wroga (wiecej = wolniej)
     enemy.delay = 0;
 
     const target = enemy.path[enemy.targetIndex];
@@ -232,12 +256,11 @@ function spawnEnemies() {
       enemy.targetIndex++;
 
       if (enemy.targetIndex >= enemy.path.length) {
-        enemy.targetIndex = 0; // цикл
+        enemy.targetIndex = 0; // cykl
       }
     }
 
-    // столкновение с игроком
-    if (enemy.x === player.x && enemy.y === player.y) {
+    if (enemy.x === player.x && enemy.y === player.y) {   ///////// zderzenie z graczem ///////////
       alert("You died");
       location.reload();
     }
@@ -255,7 +278,7 @@ function spawnEnemies() {
     // dzwi bez klucza
     if (tile === 5 && !hasKey) return;
 
-    // ruch
+    // ruch логический
     player.x = x;
     player.y = y;
 
@@ -274,15 +297,16 @@ function spawnEnemies() {
     // wyjście
     if (tile === 2) {
       gameOver = true;
-     showWinMessage();
+      showWinMessage();
     }
   }
 
   function drawPlayer() {
     ctx.fillStyle = "red";
+
     ctx.fillRect(
-      player.x * tileSize,
-      player.y * tileSize,
+      player.pixelX,
+      player.pixelY,
       tileSize,
       tileSize
     );
@@ -304,25 +328,32 @@ function spawnEnemies() {
   function gameLoop() {
     if(gameOver) return;
 
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.clearRect(0, 0, canvas.width, canvas.height); ///////// Czyścimy całe płótno przed rysowaniem //////////
 
     updateMovement();
     updateEnemies();
 
-    drawMap();
-    drawPlayer();
-    drawEnemies();
+    if (camera) {
+       
+        camera.update(player.pixelX, player.pixelY); /////////// kamera przesuwa sie za graczem //////////
+
+        camera.apply(ctx);
+
+        drawMap();
+        drawPlayer();
+        drawEnemies();
+
+        // Отменяем трансформацию
+        camera.release(ctx);
+    }
 
     requestAnimationFrame(gameLoop);
   }
 
-
-
-
-  function showWinMessage() {                                                    ///////// POKAZUJE NAPIS O WYGRANIU
+  function showWinMessage() {                                          ///////// POKAZUJE NAPIS O WYGRANIU
   const message = document.createElement("div");
 
-  if(difficulty == "expert"){                 /////////// JEZELI WYGRALES NA TRUDNOSCI EXPERT
+  if(difficulty == "expert"){                /////////// JEZELI WYGRALES NA TRUDNOSCI EXPERT
      message.innerText = `Ma boy watafa`; 
   } else {
   message.innerText = `You passed ${mapName} on ${difficulty} congrats`;
@@ -334,7 +365,7 @@ function spawnEnemies() {
     btn.style.marginTop = "10px";
 
     btn.onclick = () => {
-      window.location.href = "../index.html"; // 🔥 ВОТ ЭТО ГЛАВНОЕ ИСПРАВЛЕНИЕ
+      window.location.href = "../index.html";
     };
 
   message.appendChild(btn);
