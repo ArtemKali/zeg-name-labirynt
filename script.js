@@ -31,8 +31,8 @@ let selectedMap = null;
 /////////* WSZYSTKIE MENU */////////
 const menus = {
   main: [
-    { text: "New Game", action: () => setMenu("map") },
-    { text: "Continue", action: () => console.log("Continue") },
+    { text: "Campaign", action: startCampaign },
+    { text: "Arcade", action: () => setMenu("map") },
     { text: "Settings", action: () => setMenu("settings") },
     { text: "Credits", action: () => setMenu("credits") }
   ],
@@ -202,7 +202,7 @@ function setSetting(name) {
     // текст
     const text = document.createElement("div");
     text.className = "menu-item";
-    text.textContent = "Bro its just WASD and SHIFT, idk what are you wanna switch :/";
+    text.textContent = "Bro its just WASD and SHIFT, idk what do you wanna switch :/";
 
     // кнопка назад
     const back = document.createElement("div");
@@ -290,14 +290,22 @@ window.addEventListener("load", () => {
 music.loop = true;
 
 
-//////* СТАРТ ИГРЫ *///////
+//////* START ARCADE *///////
 function startGame(difficulty) {
   console.log("Map:", selectedMap);
   console.log("Difficulty:", difficulty);
 
   music.pause();
-
   window.location.href = `game/index.html?map=${selectedMap}&difficulty=${difficulty}`;
+}
+
+//////* START CAMPAIGN *///////
+function startCampaign() {
+  music.pause();
+
+  window.location.href = "campaign/index.html";
+
+  music.pause();
 }
 
 //////////* START *///////////

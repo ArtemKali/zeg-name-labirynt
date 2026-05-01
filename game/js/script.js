@@ -68,14 +68,14 @@ window.addEventListener("DOMContentLoaded", () => {
   }
 
   
-  const tileSize = 64;
+  const tileSize = 80;
 
-  // Инициализация игрока с дополнительными полями для плавности
+
   let player = { 
     x: 0, 
     y: 0, 
-    pixelX: 0, // Визуальная позиция по X
-    pixelY: 0  // Визуальная позиция по Y
+    pixelX: 0,
+    pixelY: 0 
   };
 
   // Инициализация камеры
@@ -286,12 +286,12 @@ function spawnEnemies() {
     if (tile === 4) {
       hasKey = true;
       map[y][x] = 0; // убрать ключ с карты
-      console.log("Ключ получен");
+      console.log("You got a key");
     }
 
     // drzwi otwarte
     if (tile === 5 && hasKey) {
-      console.log("Дверь открыта");
+      console.log("Doors is open");
     }
 
     // wyjście
