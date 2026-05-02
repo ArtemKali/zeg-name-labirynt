@@ -1,5 +1,6 @@
 import { levels } from "./maps.js";
 import { Camera } from "./camera.js"; // import kamery i map
+import { Movement } from "./movement.js"; //////// IMPORTUJEMY RUCH
 
 window.addEventListener("DOMContentLoaded", () => { // Uruchamia po załadowaniu całego HTML
 
@@ -43,14 +44,14 @@ window.addEventListener("DOMContentLoaded", () => { // Uruchamia po załadowaniu
     }
   };
 
-  // Wybór level
+  ////////////= WYBOR POZIOMU =\\\\\\\\\\\\\
   let currentLevel = LEVEL_CONFIG[mapName]?.[difficulty] ?? 0;
 
   function cloneLevel(levelIndex) {
     return levels[levelIndex].map(row => row.slice());
   } // kopia level
 
-  let map = cloneLevel(currentLevel);
+  let map = cloneLevel(currentLevelIndex);
 
   let hasKey = false; // klucz 
 
@@ -64,16 +65,17 @@ window.addEventListener("DOMContentLoaded", () => { // Uruchamia po załadowaniu
   if (!ctx) {
     console.error("2D context not available");
     return;
+
+    
   } // pobiera kontekst rysowania
  
   const tileSize = 80; // rozmiar
 
   let player = { 
-    x: 0, 
-    y: 0, 
     pixelX: 0,
     pixelY: 0 
   }; // gracz
+
 
   // Inicjalizacja kamery
   let camera = new Camera(
@@ -82,6 +84,8 @@ window.addEventListener("DOMContentLoaded", () => { // Uruchamia po załadowaniu
     map[0].length * tileSize, 
     map.length * tileSize
   );
+  
+  let movement = new Movement(player, map, tileSize);
 
   let enemies = []; // przeciwnik
 function spawnEnemies() { // spawn przeciwników
@@ -119,6 +123,7 @@ function spawnEnemies() { // spawn przeciwników
     for (let y = 0; y < map.length; y++) {
       for (let x = 0; x < map[y].length; x++) {
         if (map[y][x] === 3) {
+
           player.x = x;
           player.y = y;
           // Ustawiamy początkową pozycję w pikselach
@@ -130,6 +135,7 @@ function spawnEnemies() { // spawn przeciwników
     }
     console.warn("Spawn tile (3) not found"); // jeżeli nie znajdzie spawn
   }
+
 
   function loadLevel(level) { // Ładowanie poziomu
     if (!levels[level]) {
@@ -148,6 +154,7 @@ function spawnEnemies() { // spawn przeciwników
         camera.mapHeight = map.length * tileSize;
     }
   }
+
 
   findStart();
   spawnEnemies();
@@ -181,6 +188,7 @@ function spawnEnemies() { // spawn przeciwników
     }
   }
 
+
   document.addEventListener("keydown", (e) => {
     keys[e.code] = true;
   });
@@ -191,36 +199,49 @@ function spawnEnemies() { // spawn przeciwników
 
   let moveDelay = 0;
 
-  function updateMovement() { // ruszanie gracza
-    moveDelay++;
+  function updateMovement() {
+    if (gameOver) return;
 
-    let interval = 8; // szybkosc gracza (wiecej = wolniej)
+    // Вызываем плавное движение из класса Movement
+    movement.update();
 
-    if (keys["ShiftLeft"] || keys["ShiftRight"]) {
-      interval = 6; // przyspieszenie
-    }
+    // Проверка взаимодействия с объектами (ключ, финиш, двери)
+    // Берем центр игрока для определения клетки
+    let centerX = player.pixelX + tileSize / 2;
+    let centerY = player.pixelY + tileSize / 2;
+    let gridX = Math.floor(centerX / tileSize);
+    let gridY = Math.floor(centerY / tileSize);
 
-    if (moveDelay >= interval) {
-        moveDelay = 0;
+    if (map[gridY] && map[gridY][gridX] !== undefined) {
+        const tile = map[gridY][gridX];
 
-        let newX = player.x;
-        let newY = player.y;
+        // Подбирание ключа
+        if (tile === 4) {
+            hasKey = true;
+            map[gridY][gridX] = 0; // убрать ключ
+            console.log("You got a key");
+        }
 
-        if (keys["KeyW"]) newY--;
-        else if (keys["KeyS"]) newY++;
-        else if (keys["KeyA"]) newX--;
-        else if (keys["KeyD"]) newX++;
+        // Дверь (если есть ключ, она исчезает при касании)
+        if (tile === 5 && hasKey) {
+            map[gridY][gridX] = 0;
+            console.log("Doors is open");
+        }
 
-        if (newX !== player.x || newY !== player.y) {
-          movePlayer(newX, newY);
+        // Финиш
+        if (tile === 2) {
+            gameOver = true;
+            showWinMessage();
         }
     }
+
 
 // Logika płyności: przyciągamy pozycję pikseli do siatki
 
     let lerpSpeed = 0.25; // szybkosc plynnosci
     player.pixelX += (player.x * tileSize - player.pixelX) * lerpSpeed;
     player.pixelY += (player.y * tileSize - player.pixelY) * lerpSpeed;
+
   }
 
   function updateEnemies() { // Ruch wrogów
@@ -241,27 +262,34 @@ function spawnEnemies() { // spawn przeciwników
     if (dx !== 0) newX += Math.sign(dx);
     else if (dy !== 0) newY += Math.sign(dy);
 
+
     // sprawdzenie ściany
     if (map[newY] && map[newY][newX] !== 1) {
       enemy.x = newX;
       enemy.y = newY;
     }
 
+
     // dotarł do punktu - następny
     if (enemy.x === target.x && enemy.y === target.y) {
       enemy.targetIndex++;
-
       if (enemy.targetIndex >= enemy.path.length) {
         enemy.targetIndex = 0; // cykl
       }
     }
 
-    if (enemy.x === player.x && enemy.y === player.y) { // zderzenie z graczem
+
+    let pGridX = Math.floor((player.pixelX + tileSize/2) / tileSize);
+    let pGridY = Math.floor((player.pixelY + tileSize/2) / tileSize);
+    
+    if (enemy.x === pGridX && enemy.y === pGridY) {   ///////// zderzenie z graczem ///////////
+
       alert("You died");
       location.reload();
     }
   }
 }
+
 
   function movePlayer(x, y) {
     if (!map[y] || map[y][x] === undefined) return;
@@ -298,19 +326,20 @@ function spawnEnemies() { // spawn przeciwników
   }
 
   function drawPlayer() { // rysuje gracza
-    ctx.fillStyle = "red";
 
+    ctx.fillStyle = "red";
+    // Рисуем игрока с небольшим отступом (как в кампании), чтобы он визуально не входил в стены
+    const m = movement.margin;
     ctx.fillRect(
-      player.pixelX,
-      player.pixelY,
-      tileSize,
-      tileSize
+      player.pixelX + m,
+      player.pixelY + m,
+      tileSize - m * 2,
+      tileSize - m * 2
     );
   }
 
   function drawEnemies() { // rysuje wroga
   ctx.fillStyle = "purple";
-
   for (let enemy of enemies) {
     ctx.fillRect(
       enemy.x * tileSize,
