@@ -1,4 +1,4 @@
-1. Tytuł - Ashes
+1. Tytuł - Zeg-game
    Opis - gra typu labirynt
    
 2. Technologie - HTML, CANVAS, CSS, JavaScript
