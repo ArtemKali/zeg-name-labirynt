@@ -31,7 +31,6 @@ export class Movement {
         if (this.keys["a"] || this.keys["arrowleft"] || this.keys["ф"]) moveX -= currentSpeed;
         if (this.keys["d"] || this.keys["arrowright"] || this.keys["в"]) moveX += currentSpeed;
 
-        
         if (moveX !== 0) this.move(moveX, 0);
         if (moveY !== 0) this.move(0, moveY);
     }
@@ -40,12 +39,19 @@ export class Movement {
         let nextPixelX = this.player.pixelX + dx;
         let nextPixelY = this.player.pixelY + dy;
 
-        /////////// 4 tochki hitboxa ///////////
+        /////////////////////// PARAMETRY HITBOXA (obszar nog) ////////////////////////
+        
+        let hitboxW = 42;  /////////////////  SZEROKOSC OBSZARU KOLIZJI ///////////////////////////////
+        let hitboxH = 8;   ///////////////// WYSOKOSC OBSZARU KOLIZJI (jezeli 0 beda bagi) ////////////////////
+        let offX = (this.tileS - hitboxW) / 2; 
+        let offY = 30;
+
+        /////////// 4 точки хитбокса ///////////
         let points = [
-            { x: nextPixelX + this.margin, y: nextPixelY + this.margin },
-            { x: nextPixelX + this.tileS - this.margin, y: nextPixelY + this.margin },
-            { x: nextPixelX + this.margin, y: nextPixelY + this.tileS - this.margin },
-            { x: nextPixelX + this.tileS - this.margin, y: nextPixelY + this.tileS - this.margin }
+            { x: nextPixelX + offX, y: nextPixelY + offY },
+            { x: nextPixelX + offX + hitboxW, y: nextPixelY + offY },
+            { x: nextPixelX + offX, y: nextPixelY + offY + hitboxH },
+            { x: nextPixelX + offX + hitboxW, y: nextPixelY + offY + hitboxH }
         ];
 
         let canMove = points.every(p => {
@@ -59,7 +65,7 @@ export class Movement {
             this.player.pixelY = nextPixelY;
             
             this.player.x = Math.floor((this.player.pixelX + this.tileS / 2) / this.tileS);
-            this.player.y = Math.floor((this.player.pixelY + this.tileS / 2) / this.tileS);
+            this.player.y = Math.floor((this.player.pixelY + offY + hitboxH/2) / this.tileS);
         }
     }
 }

@@ -2,20 +2,25 @@ import { CMlevels } from './maps.js';
 import { CampaignCamera } from './camera.js';     ///////////////// IMPORTUJEMY CO NAM TRZEBA Z INNYCH PLIKOW /////////////////
 import { Movement } from './movement.js';
 import { Inventory } from './inventory.js';  
+import { Player } from './animate.js';
 
 const canvas = document.getElementById("campaign");
 const ctx = canvas.getContext("2d");
+
+let keys = {}; ///////////////// PRZECHOWYWANIE NACISNIETYCH KLAWISZY /////////////////
 
 canvas.width = window.innerWidth;
 canvas.height = window.innerHeight;
 
 const tileS = 100;  //////////////////// ROZMIAR KLATKI //////////////////////
 
+let player = { x: 0, y: 0, pixelX: 0, pixelY: 0 }; //////////////////// DANE POZYCJI GRACZA ////////////////////
+let playerVisual = new Player(tileS); //////////////////// WIZUALIZACJA I ANIMACJA ////////////////////
+
 let currentLevelIndex = 0;
 let levelData = CMlevels[currentLevelIndex];
 let map = levelData.grid;
 
-let player = { x: 0, y: 0, pixelX: 0, pixelY: 0 };
 let movement = new Movement(player, map, tileS);
 
 ////////////////////// INICJALIZUJEMY INWENTARZ /////////////////////
@@ -28,8 +33,8 @@ let isTeleporting = false;
 ///////////////// NACISNIENIE KLAWISZY /////////////////
 window.addEventListener("keydown", (e) => {
     const key = e.key.toLowerCase();
+    keys[key] = true; ///////////////// REJESTRACJA NACISNIECIA /////////////////
     
-    ////////////////// WZAIMODZIALANIE (E) /////////////////
     if (key === "e" || key === "у") {
         if (inventory.currentChest) {
             inventory.currentChest = null;
@@ -38,7 +43,6 @@ window.addEventListener("keydown", (e) => {
         }
     }
 
-    ////////////////// INVENTARZ (F) /////////////////
     if (key === "f" || key === "а") {
         if (!inventory.currentChest) { 
             inventory.isOpen = !inventory.isOpen;
@@ -46,28 +50,25 @@ window.addEventListener("keydown", (e) => {
     }
 });
 
+///////////////// ZWOLNIENIE KLAWISZY /////////////////
+window.addEventListener("keyup", (e) => {
+    keys[e.key.toLowerCase()] = false; ///////////////// REJESTRACJA PUSZCZENIA /////////////////
+});
+
 function checkChestInteraction() {
-    
-    let centerX = Math.floor((player.pixelX + tileS / 2) / tileS);   ////////////////// SPRAWDZAMY GDZIE TERAZ JEST GRACZ /////////////////
+    let centerX = Math.floor((player.pixelX + tileS / 2) / tileS);
     let centerY = Math.floor((player.pixelY + tileS / 2) / tileS);
 
-    ////////////////// SPRAWDZAMY SASIEDNIE POLA (3x3) ////////////////////
     for (let dy = -1; dy <= 1; dy++) {
         for (let dx = -1; dx <= 1; dx++) {
             let gridX = centerX + dx;
             let gridY = centerY + dy;
 
-            //////////////////// SPRAWDZAMY CZY TO SKRZYNIA (ID 2) ///////////////////
             if (map[gridY] && map[gridY][gridX] === 2) {
                 const chestKey = `${gridX},${gridY}`;
-                
-                //////////////////// SPRAWDZAMY DANE SKRZYNI W LEVELU /////////////////
                 if (levelData.chests && levelData.chests[chestKey]) {
-                    inventory.currentChest = {
-                        key: chestKey,
-                        items: levelData.chests[chestKey]
-                    };
-                    return; ////////////////////// ZNALEZIONO NAJBLIŻSZĄ SKRZYNIĘ /////////////////
+                    inventory.currentChest = { key: chestKey, items: levelData.chests[chestKey] };
+                    return;
                 }
             }
         }
@@ -79,14 +80,12 @@ function initLevel(index, spawnX = null, spawnY = null) {
     levelData = CMlevels[currentLevelIndex];
     map = levelData.grid;
 
-    ////////////////// USTAWIENIE SPAWNU /////////////////
     if (spawnX !== null && spawnY !== null) {
         player.pixelX = spawnX * tileS;
         player.pixelY = spawnY * tileS;
     } else {
         for (let y = 0; y < map.length; y++) {
             for (let x = 0; x < map[y].length; x++) {
-                ////////////////// SZUKAMY TILE SPAWNU (ID 3) /////////////////
                 if (map[y][x] === 3) {
                     player.pixelX = x * tileS;
                     player.pixelY = y * tileS;
@@ -99,26 +98,34 @@ function initLevel(index, spawnX = null, spawnY = null) {
     camera = new CampaignCamera(canvas.width, canvas.height, map[0].length * tileS, map.length * tileS);
 }
 
-function draw() {
+function draw() {   //////////////////////////////////////////////////////// FUNKCJA DRAW \\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
+    
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     
     /////////////////// BLOKUJEMY RUCH JESLI UI OTWARTE ///////////////////
     if (!inventory.isUIActive()) {
+        movement.keys = keys; ////////////////// PRZEKAZUJEMY KLAWISZE DO RUCHU //////////////////
         movement.update();
+        playerVisual.updateAnimation(keys); //////////////////// AKTUALIZACJA KLATEK ANIMACJI ////////////////////
     }
     
     camera.update(player.pixelX, player.pixelY);
     
+    // Проверка портала (улучшенная)
     let gridX = Math.floor((player.pixelX + tileS / 2) / tileS);
     let gridY = Math.floor((player.pixelY + tileS / 2) / tileS);
     
-    ////////////////// TELEPORTY /////////////////
     if (map[gridY] && map[gridY][gridX] >= 4 && !isTeleporting) {
         const portal = levelData.portals[map[gridY][gridX]];
         if (portal) {
             isTeleporting = true;
+            console.log("Teleporting to:", portal.targetLevel);
             initLevel(portal.targetLevel, portal.targetX, portal.targetY);
-            setTimeout(() => { isTeleporting = false; }, 500);
+            
+            // Ждем чуть-чуть перед тем как разрешить новый переход, чтобы не кидало туда-сюда
+            setTimeout(() => { isTeleporting = false; }, 1000);
+            
+            // Просто выходим из текущего кадра, следующий отрисует уже новую карту
             requestAnimationFrame(draw);
             return; 
         }
@@ -143,19 +150,12 @@ function draw() {
         }
     }
 
-    ////////////////// GRACZ /////////////////
-    ctx.fillStyle = "red";
-    const m = movement.margin; 
-    ctx.fillRect(
-        Math.floor(player.pixelX) + m, 
-        Math.floor(player.pixelY) + m, 
-        tileS - m * 2, 
-        tileS - m * 2
-    );
+    ////////////////// RYSOWANIE ANIMOWANEGO GRACZA /////////////////
+    playerVisual.draw(ctx, player.pixelX, player.pixelY); 
 
     ctx.restore();
 
-    ////////////////// RYSOWANIE UI (INWENTARZ + SKRZYNIE) //////////////////
+    ////////////////// RYSOWANIE UI //////////////////
     inventory.draw();
 
     requestAnimationFrame(draw);
