@@ -1,7 +1,7 @@
 import { CMlevels } from './maps.js'; 
 import { CampaignCamera } from './camera.js';     ///////////////// IMPORTUJEMY CO NAM TRZEBA Z INNYCH PLIKOW /////////////////
 import { Movement } from './movement.js';
-import { Inventory } from './inventory.js'; 
+import { Inventory } from './inventory.js';  
 
 const canvas = document.getElementById("campaign");
 const ctx = canvas.getContext("2d");
