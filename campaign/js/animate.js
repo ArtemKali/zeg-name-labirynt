@@ -2,7 +2,7 @@ export class Player {
     constructor(tileS) {
         this.tileS = tileS;
         this.img = new Image();
-        this.img.src = './sSheet/char_a_p1_0bas_humn_v00.png'; 
+        // this.img.src = './sSheet/char_a_p1_0bas_humn_v00.png'; 
 
         this.spriteW = 64; 
         this.spriteH = 64;
@@ -19,23 +19,22 @@ export class Player {
     updateAnimation(keys) {
         if (!keys) return;
         let moving = false;
-        let isRunning = keys["shift"]; // Проверяем бег
+        let isRunning = keys["shift"];
 
-        // 1. Направление
         if (keys["w"] || keys["ц"] || keys["arrowup"]) { this.direction = "up"; moving = true; } 
         else if (keys["s"] || keys["ы"] || keys["arrowdown"]) { this.direction = "down"; moving = true; } 
         else if (keys["a"] || keys["ф"] || keys["arrowleft"]) { this.direction = "left"; moving = true; } 
         else if (keys["d"] || keys["в"] || keys["arrowright"]) { this.direction = "right"; moving = true; }
 
         if (moving) {
-            // Используем стандартные ряды ходьбы 4-7, так как рядов бега в этом файле нет
+            /////////////////  UZYWAMY STANDARDOWYCH SERII CHODZENIA 4-7, PONIEWAZ W TYM PLIKU NIE MA SERII BIEGANIA ////////////
             if (this.direction === "down") this.frameY = 4;
             if (this.direction === "up") this.frameY = 5;
             if (this.direction === "right") this.frameY = 6;
             if (this.direction === "left") this.frameY = 7;
 
             this.frameTimer++;
-            // Если бежим, кадры меняются каждые 4 тика, если идем — каждые 8
+            ///////// JESLI BIEGNIEMY TO KLATKI ZMIENIAJA SIE CO 4 TIKY, JESLI IDZIEMY = CO 8 ////////
             let speedLimit = isRunning ? 4 : 8; 
 
             if (this.frameTimer >= speedLimit) {
@@ -53,10 +52,15 @@ export class Player {
     }
 
     draw(ctx, pixelX, pixelY) {
-        if (!this.img.complete || this.img.naturalWidth === 0) {
-            ctx.fillStyle = "red";
-            ctx.fillRect(Math.floor(pixelX), Math.floor(pixelY), this.tileS, this.tileS);
-            return;
+    if (!this.img.complete || this.img.naturalWidth === 0) {
+        let cubeSize = 60; ////// TAKI SAM JAK hitboxSize //////
+        let offset = (this.tileS - cubeSize) / 2; // (90 - 60) / 2 = 15
+
+        ctx.fillStyle = "red";
+        ctx.fillRect(Math.floor(pixelX + offset), 
+                     Math.floor(pixelY + offset), 
+                     cubeSize, 
+                     cubeSize);
         }
 
         let drawSize = this.tileS * this.scale;

@@ -17,6 +17,8 @@ export class Inventory {
         this.mouseX = 0;
         this.mouseY = 0;
 
+        this.onDropItem = null; ////////// Callback для обработки выброса в campaign.js ///////
+
         this.initEvents();
     }
 
@@ -27,6 +29,11 @@ export class Inventory {
             this.mouseY = e.clientY;
         });
         window.addEventListener("mouseup", (e) => this.handleMouseUp(e.clientX, e.clientY));
+    }
+
+    ////////////////// METODA DO CZYSZCZENIA INWENTARZA /////////////////
+    clear() {
+        this.items = [];
     }
 
     ////////////////// SPRAWDZAMY CZY UI AKTYWNE /////////////////
@@ -60,10 +67,17 @@ export class Inventory {
     handleMouseUp(mx, my) {
         if (!this.draggedItem) return;
 
-        const { invX, chestX, startY } = this.getLayout();
+        const { invX, chestX, startY, dropZone } = this.getLayout();
 
+        ////////////////// UPUSZCZENIE DO STREFY WYRZUCANIA /////////////////
+        if (mx > dropZone.x && mx < dropZone.x + dropZone.w && my > dropZone.y && my < dropZone.y + dropZone.h) {
+            // Если есть функция-обработчик, вызываем её
+            if (this.onDropItem) {
+                this.onDropItem(this.draggedItem);
+            }
+        }
         ////////////////// UPUSZCZENIE DO INVENTARZA /////////////////
-        if (mx > invX && mx < invX + this.winW && my > startY && my < startY + this.winH) {
+        else if (mx > invX && mx < invX + this.winW && my > startY && my < startY + this.winH) {
             this.items.push(this.draggedItem);
         }
         ////////////////// UPUSZCZENIE DO SKRZYNI /////////////////
@@ -94,7 +108,14 @@ export class Inventory {
             chestX = -1000;
         }
 
-        return { invX, chestX, startY };
+        const dropZone = {
+            x: 50,
+            y: startY,
+            w: 150,
+            h: this.winH
+        };
+
+        return { invX, chestX, startY, dropZone };
     }
 
     draw() {
@@ -104,7 +125,22 @@ export class Inventory {
         this.ctx.fillStyle = "rgba(0,0,0,0.7)";
         this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
 
-        const { invX, chestX, startY } = this.getLayout();
+        const { invX, chestX, startY, dropZone } = this.getLayout();
+
+        ////////////////// RYSOWANIE STREFY WYRZUCANIA /////////////////
+        this.ctx.fillStyle = "rgba(200, 50, 50, 0.3)";
+        this.ctx.strokeStyle = "red";
+        this.ctx.lineWidth = 2;
+        this.ctx.setLineDash([10, 10]);
+        this.ctx.fillRect(dropZone.x, dropZone.y, dropZone.w, dropZone.h);
+        this.ctx.strokeRect(dropZone.x, dropZone.y, dropZone.w, dropZone.h);
+        this.ctx.setLineDash([]);
+
+        this.ctx.fillStyle = "white";
+        this.ctx.font = "bold 18px Arial";
+        this.ctx.textAlign = "center";
+        this.ctx.fillText("ВЫБРОСИТЬ", dropZone.x + dropZone.w / 2, dropZone.y + dropZone.h / 2);
+        this.ctx.textAlign = "left";
 
         ////////////////// RYSOWANIE INVENTARZA /////////////////
         this.drawWindow("Ваш Инвентарь", this.items, invX, startY);
