@@ -4,6 +4,7 @@ import { Movement } from './movement.js';
 import { Inventory } from './inventory.js';  
 import { Player } from './animate.js';
 import { Enemy } from './enemies.js';
+import { Pause } from './pause.js'; // Импортируем новый класс
 
 const canvas = document.getElementById("campaign");
 const ctx = canvas.getContext("2d");
@@ -40,6 +41,9 @@ let movement = null;
 ////////////////////// INICJALIZUJEMY INWENTARZ /////////////////////
 const inventory = new Inventory(canvas, ctx);
 
+////////////////////// ИНИЦИАЛИЗИРУЕМ ПАУЗУ /////////////////////
+const pause = new Pause(canvas, ctx);
+
 let droppedItems = []; //////// PRZECHOWYWANIE WYRZUCONYCH PRZEDMIOTOW ////////
 
 // Callback do obsługi wyrzucania przedmiotów
@@ -69,10 +73,20 @@ window.addEventListener("keydown", (e) => {
         return;
     }
 
+    // ЛОГИКА ПАУЗЫ И ВЫХОДА ИЗ МЕНЮ
+    if (key === "escape") {
+        if (inventory.isOpen || inventory.currentChest) {
+            inventory.isOpen = false;
+            inventory.currentChest = null;
+        } else if (!isDead) {
+            pause.toggle();
+        }
+    }
+
     if (key === "e" || key === "у") {
         if (inventory.currentChest) {
             inventory.currentChest = null;
-        } else if (!inventory.isOpen) {
+        } else if (!inventory.isOpen && !pause.isPaused) {
             // Najpierw próbujemy podnieść przedmiot z ziemi, jeśli go nie ma - sprawdzamy skrzynię
             if (!checkPickUpItem()) {
                 checkChestInteraction();
@@ -81,7 +95,7 @@ window.addEventListener("keydown", (e) => {
     }
 
     if (key === "f" || key === "а") {
-        if (!inventory.currentChest) { 
+        if (!inventory.currentChest && !pause.isPaused) { 
             inventory.isOpen = !inventory.isOpen;
         }
     }
@@ -132,27 +146,28 @@ function checkPickUpItem() {
     return false;
 }
 
-////////////////// FUNKCJA RESET GAME ///////////////////
+///////////////// FUNKCJA RESET GAME /////////////////
 function resetGame() {
     isDead = false;
     deathAlpha = 0;
     playerHealth = 3;
-    inventory.items = []; /////////// PELNE WYCZYSCZENIE INWENTARZA //////////
+    inventory.items = []; // Полная очистка инвентаря при смерти (если нужно)
     
     // СБРОС СТАМИНЫ ПРИ СМЕРТИ
     if (movement) {
         movement.stamina = movement.maxStamina;
         movement.isExhausted = false;
     }
-    
-    ////// МЕНЯЕМ currentLevelIndex на 0, чтобы zawsze возрождаться na pierwszej karcie ///////
+
+    // МЕНЯЕМ currentLevelIndex на 0, чтобы zawsze возрождаться na pierwszej karcie
     initLevel(0); 
 }
 
 function initLevel(index, spawnX = null, spawnY = null) {
     currentLevelIndex = index;
     
-    /////////// TWORZYMY GLEBOKA KOPIE DANYCH POZIOMU, TERAZ JESLI USUNIEMY ELEMENT Z KOPII POZOSTANIE ON W ORYGINALIE (CMlevels) ////////////
+    //WAŻNE: Tworzymy „głęboką kopię” danych poziomu.
+    // Teraz, jeśli usuniemy element z kopii, pozostanie on w oryginale (CMlevels).
     levelData = JSON.parse(JSON.stringify(CMlevels[currentLevelIndex]));
     
     map = levelData.grid;
@@ -193,8 +208,8 @@ function draw() {
     
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     
-    /////////////////// BLOKUJEMYa RUCH JESLI UI OTWARTE LUB GRACZ NIE ZYJE ///////////////////
-    if (!inventory.isUIActive() && !isDead) {
+    /////////////////// BLOKUJEMYa RUCH JESLI UI OTWARTE, ПАУЗА LUB GRACZ NIE ZYJE ///////////////////
+    if (!inventory.isUIActive() && !isDead && !pause.isPaused) {
         movement.keys = keys; ////////////////// PRZEKAZUJEMY KLAWISZE DO RUCHU //////////////////
         movement.update(activeEnemies);
         playerVisual.updateAnimation(keys); //////////////////// AKTUALIZACJA KLATEK ANIMACJI ////////////////////
@@ -237,7 +252,7 @@ function draw() {
     let gridX = Math.floor((player.pixelX + tileS / 2) / tileS);
     let gridY = Math.floor((player.pixelY + 45) / tileS);
     
-    if (map[gridY] && map[gridY][gridX] >= 4 && !isTeleporting && !isDead) {
+    if (map[gridY] && map[gridY][gridX] >= 4 && !isTeleporting && !isDead && !pause.isPaused) {
         const portal = levelData.portals[map[gridY][gridX]];
         if (portal) {
             isTeleporting = true;
@@ -308,12 +323,12 @@ function draw() {
         }
     }
 
-    ////////////////// RYSUJEMY KRESKE STAMINY //////////////////
+    // РИСУЕМ ПОЛОСКУ СТАМИНЫ ПОД СЕРДЕЧКАМИ
     if (movement) {
         let sWidth = 170;
         let sHeight = 12;
         let sX = 20;
-        let sY = 80; ////////// TROCHY NIZEJ HEARTS (20 + 50 + 10) //////////
+        let sY = 80; 
 
         ctx.fillStyle = "rgba(0, 0, 0, 0.5)";
         ctx.fillRect(sX, sY, sWidth, sHeight);
@@ -327,7 +342,10 @@ function draw() {
         ctx.strokeRect(sX, sY, sWidth, sHeight);
     }
 
-    /////////////////////// DEATH EKRAN ///////////////////////
+    // РИСУЕМ ОКНО ПАУЗЫ
+    pause.draw();
+
+    /////////////////////// DEATH EKRAN /////////////////////
     if (isDead) {
         if (deathAlpha < 1) deathAlpha += 0.01; 
         ctx.save();
