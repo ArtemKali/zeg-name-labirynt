@@ -24,13 +24,13 @@ let playerHealth = 3;
 let isInvulnerable = false; ///// NIEZNISZCZALNOSC PO UDERZENIU /////
 
 const heartImage = new Image();
-heartImage.src = '../../pictures/heart.png';
+heartImage.src = '../pictures/heart.png';
 
 //////////////// DEAD SYSTEM /////////////////
 let isDead = false;
 let deathAlpha = 0; //// dead screen opacity ////
 const deathImage = new Image();
-deathImage.src = '../../pictures/death_screen.png';
+deathImage.src = '../pictures/death_screen.png';
 
 let currentLevelIndex = 0;
 let levelData = null; 
