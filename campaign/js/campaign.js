@@ -1,12 +1,12 @@
 import { CMlevels } from './maps.js'; 
-import { CampaignCamera } from './camera.js';     ///////////////// IMPORTUJEMY CO NAM TRZEBA Z INNYCH PLIKOW /////////////////
+import { CampaignCamera } from './camera.js';     
 import { Movement } from './movement.js';
 import { Inventory } from './inventory.js';  
 import { Player } from './animate.js';
-import { Enemy } from './enemies.js';
-import { Pause } from './pause.js'; // Импортируем новый класс
-import { Fog } from './fog.js'; // Импорт тумана
-import { Minimap } from './minimap.js'; // Импорт миникарты
+import { Enemy } from './enemies.js';        ///////////////// IMPORTUJEMY CO NAM TRZEBA Z INNYCH PLIKOW /////////////////
+import { Pause } from './pause.js';
+import { Fog } from './fog.js'; 
+import { Minimap } from './map.js';
 
 const canvas = document.getElementById("campaign");
 const ctx = canvas.getContext("2d");
