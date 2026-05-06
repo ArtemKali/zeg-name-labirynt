@@ -5,6 +5,8 @@ import { Inventory } from './inventory.js';
 import { Player } from './animate.js';
 import { Enemy } from './enemies.js';
 import { Pause } from './pause.js'; // Импортируем новый класс
+import { Fog } from './fog.js'; // Импорт тумана
+import { Minimap } from './minimap.js'; // Импорт миникарты
 
 const canvas = document.getElementById("campaign");
 const ctx = canvas.getContext("2d");
@@ -26,6 +28,10 @@ let isInvulnerable = false; ///// NIEZNISZCZALNOSC PO UDERZENIU /////
 const heartImage = new Image();
 heartImage.src = '../pictures/heart.png';
 
+/////////// OBRAZEK MAPY ///////////
+const mapIcon = new Image();
+mapIcon.src = '../pictures/map.png'; 
+
 //////////////// DEAD SYSTEM /////////////////
 let isDead = false;
 let deathAlpha = 0; //// dead screen opacity ////
@@ -37,6 +43,8 @@ let levelData = null;
 let map = null;
 
 let movement = null;
+let fog = null;
+const minimap = new Minimap(canvas, ctx, tileS); //// inicjalizacja minimapy ////
 
 ////////////////////// INICJALIZUJEMY INWENTARZ /////////////////////
 const inventory = new Inventory(canvas, ctx);
@@ -73,21 +81,31 @@ window.addEventListener("keydown", (e) => {
         return;
     }
 
-    // ЛОГИКА ПАУЗЫ И ВЫХОДА ИЗ МЕНЮ
+    ///// LOGIKA PAUSE & MAP ////
     if (key === "escape") {
         if (inventory.isOpen || inventory.currentChest) {
             inventory.isOpen = false;
             inventory.currentChest = null;
+        } else if (minimap.isFullMap) {
+            minimap.toggle(); // Закрываем карту по Escape, если она открыта
         } else if (!isDead) {
             pause.toggle();
         }
     }
 
+    //////// LOGIKA OTRWIERANIA MAPY NA M ///////
+    if (key === "m" || key === "ь") {
+        if (!inventory.isOpen && !pause.isPaused && !isDead) {
+            minimap.toggle();
+        }
+    }
+
+    //////////// OTWIERANIE CHEST NA E ////////////
     if (key === "e" || key === "у") {
         if (inventory.currentChest) {
             inventory.currentChest = null;
-        } else if (!inventory.isOpen && !pause.isPaused) {
-            // Najpierw próbujemy podnieść przedmiot z ziemi, jeśli go nie ma - sprawdzamy skrzynię
+        } else if (!inventory.isOpen && !pause.isPaused && !minimap.isFullMap) {
+            // Najpierw próbujemy поднять предмет с земли, если его нет - проверяем сундук //
             if (!checkPickUpItem()) {
                 checkChestInteraction();
             }
@@ -95,7 +113,7 @@ window.addEventListener("keydown", (e) => {
     }
 
     if (key === "f" || key === "а") {
-        if (!inventory.currentChest && !pause.isPaused) { 
+        if (!inventory.currentChest && !pause.isPaused && !minimap.isFullMap) { 
             inventory.isOpen = !inventory.isOpen;
         }
     }
@@ -151,9 +169,9 @@ function resetGame() {
     isDead = false;
     deathAlpha = 0;
     playerHealth = 3;
-    inventory.items = []; // Полная очистка инвентаря при смерти (если нужно)
+    inventory.items = []; //// PELNE WYCZYSZCZENIE INWENTARZA ///
     
-    // СБРОС СТАМИНЫ ПРИ СМЕРТИ
+    ////// PONOWIENIE STAMINY PO SMIERCI //////
     if (movement) {
         movement.stamina = movement.maxStamina;
         movement.isExhausted = false;
@@ -166,8 +184,8 @@ function resetGame() {
 function initLevel(index, spawnX = null, spawnY = null) {
     currentLevelIndex = index;
     
-    //WAŻNE: Tworzymy „głęboką kopię” danych poziomu.
-    // Teraz, jeśli usuniemy element z kopii, pozostanie on w oryginale (CMlevels).
+    //WAŻNE: Tworzymy „głęboką kopię” danych poziomu. 
+    // Teraz, если usuniemy element z kopii, pozostние on w oryginale (CMlevels).
     levelData = JSON.parse(JSON.stringify(CMlevels[currentLevelIndex]));
     
     map = levelData.grid;
@@ -200,6 +218,8 @@ function initLevel(index, spawnX = null, spawnY = null) {
         movement.map = map;
     }
     
+    fog = new Fog(map[0].length, map.length, tileS);
+
     camera = new CampaignCamera(canvas.width, canvas.height, map[0].length * tileS, map.length * tileS);
 }
 
@@ -208,11 +228,14 @@ function draw() {
     
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     
-    /////////////////// BLOKUJEMYa RUCH JESLI UI OTWARTE, ПАУЗА LUB GRACZ NIE ZYJE ///////////////////
-    if (!inventory.isUIActive() && !isDead && !pause.isPaused) {
+    /////////////////// BLOKUJEMYa RUCH JESLI UI OTWARTE, ПАУЗА, КАРТА LUB GRACZ NIE ZYJE ///////////////////
+    if (!inventory.isUIActive() && !isDead && !pause.isPaused && !minimap.isFullMap) {
         movement.keys = keys; ////////////////// PRZEKAZUJEMY KLAWISZE DO RUCHU //////////////////
         movement.update(activeEnemies);
         playerVisual.updateAnimation(keys); //////////////////// AKTUALIZACJA KLATEK ANIMACJI ////////////////////
+
+        // Обновление тумана
+        if (fog) fog.update(player.pixelX, player.pixelY);
 
         for (let enemy of activeEnemies) {
             enemy.update(player);
@@ -252,7 +275,7 @@ function draw() {
     let gridX = Math.floor((player.pixelX + tileS / 2) / tileS);
     let gridY = Math.floor((player.pixelY + 45) / tileS);
     
-    if (map[gridY] && map[gridY][gridX] >= 4 && !isTeleporting && !isDead && !pause.isPaused) {
+    if (map[gridY] && map[gridY][gridX] >= 4 && map[gridY][gridX] !== 9 && !isTeleporting && !isDead && !pause.isPaused && !minimap.isFullMap) {
         const portal = levelData.portals[map[gridY][gridX]];
         if (portal) {
             isTeleporting = true;
@@ -271,9 +294,11 @@ function draw() {
         for (let x = 0; x < map[y].length; x++) {
             if (map[y][x] === 1) {
                 ctx.fillStyle = "#333";
+            } else if (map[y][x] === 9) {
+                ctx.fillStyle = "black";
             } else if (map[y][x] === 2) {
                 ctx.fillStyle = "orange";
-            } else if (map[y][x] >= 4) {
+            } else if (map[y][x] >= 4 && map[y][x] !== 9) {
                 ctx.fillStyle = "blue";
             } else {
                 ctx.fillStyle = "#eee";
@@ -297,6 +322,13 @@ function draw() {
         ctx.textAlign = "left";
     }
 
+    for (let enemy of activeEnemies) {
+        enemy.draw(ctx);
+    }
+
+    ////////// RYSUJEMY FogOfWar ////////////
+    if (fog) fog.draw(ctx, camera);
+
     ////////////////// RYSOWANIE ANIMOWANEGO GRACZA /////////////////
     if (isInvulnerable) {
         ctx.globalAlpha = (Math.floor(Date.now() / 100) % 2 === 0) ? 0.3 : 1.0;
@@ -305,14 +337,31 @@ function draw() {
     playerVisual.draw(ctx, player.pixelX, player.pixelY); 
     ctx.globalAlpha = 1.0; 
 
-    for (let enemy of activeEnemies) {
-        enemy.draw(ctx);
-    }
-
     ctx.restore();
 
     ////////////////// RYSOWANIE UI //////////////////
     inventory.draw();
+
+    ///// Rendering of the large map (now it is drawn only if isFullMap === true) /////
+    if (minimap && fog) {
+        minimap.draw(map, fog.visited, player.pixelX, player.pixelY, tileS);
+    }
+
+    ////////// OBRAZEK MAPY ///////////
+    if (mapIcon.complete && !isDead && !minimap.isFullMap) {
+        const iconSize = 42;  //// rozmiar
+        const iconX = canvas.width - iconSize - 30;
+        const iconY = canvas.height - iconSize - 50;
+
+        ctx.drawImage(mapIcon, iconX, iconY, iconSize, iconSize);
+
+        ///// Тексt 'M' под obrazkiem /////
+        ctx.fillStyle = "white";
+        ctx.font = "bold 15px Arial";
+        ctx.textAlign = "center";
+        ctx.fillText("M", iconX + iconSize / 2, iconY + iconSize + 25);
+        ctx.textAlign = "left";
+    }
 
     ///////// RYSOWANIE HEARTS ////////
     for (let i = 0; i < playerHealth; i++) {
@@ -323,7 +372,7 @@ function draw() {
         }
     }
 
-    // РИСУЕМ ПОЛОСКУ СТАМИНЫ ПОД СЕРДЕЧКАМИ
+    /////// KRESKA STAMINY POD HEARTS //////
     if (movement) {
         let sWidth = 170;
         let sHeight = 12;
@@ -342,7 +391,7 @@ function draw() {
         ctx.strokeRect(sX, sY, sWidth, sHeight);
     }
 
-    // РИСУЕМ ОКНО ПАУЗЫ
+    /// OKIENKO PAUSE ///
     pause.draw();
 
     /////////////////////// DEATH EKRAN /////////////////////

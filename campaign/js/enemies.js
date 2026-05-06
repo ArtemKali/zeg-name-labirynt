@@ -81,7 +81,7 @@ export class Enemy {
             let gy = Math.floor(checkY / this.tileS);
 
             ///////// SCIANA BLOKUJE WIDOK /////////
-            if (this.map[gy] && this.map[gy][gx] === 1) return false; 
+            if (this.map[gy] && (this.map[gy][gx] === 1 || this.map[gy][gx] === 9)) return false; 
         }
 
         return true;
@@ -93,7 +93,8 @@ export class Enemy {
         ///////// CEL W SCIANIE /////////
         if (this.map[targetY] === undefined || 
             this.map[targetY][targetX] === undefined || 
-            this.map[targetY][targetX] === 1) return [];
+            this.map[targetY][targetX] === 1 ||
+            this.map[targetY][targetX] === 9) return [];
 
         let openSet = [{ x: startX, y: startY, g: 0, f: 0, parent: null }];
         let closedSet = new Set();
@@ -129,7 +130,7 @@ export class Enemy {
 
             for (let n of neighbors) {
                 if (n.y < 0 || n.y >= this.map.length || n.x < 0 || n.x >= this.map[0].length) continue;
-                if (this.map[n.y][n.x] === 1) continue;
+                if (this.map[n.y][n.x] === 1 || this.map[n.y][n.x] === 9) continue;
                 if (closedSet.has(`${n.x},${n.y}`)) continue;
 
                 let gScore = current.g + 1;
@@ -161,7 +162,7 @@ export class Enemy {
         for (let y = 0; y < this.map.length; y++) {
             for (let x = 0; x < this.map[y].length; x++) {
 
-                if (this.map[y][x] !== 1 && this.map[y][x] !== 2 && this.map[y][x] < 4) {
+                if (this.map[y][x] !== 1 && this.map[y][x] !== 9 && this.map[y][x] !== 2 && this.map[y][x] < 4) {
                     
                     let isCurrent = (x === currentX && y === currentY);
                     let inHistory = this.visitedPoints.some(p => p.x === x && p.y === y);

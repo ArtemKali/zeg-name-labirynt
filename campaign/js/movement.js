@@ -108,7 +108,7 @@ export class Movement {
         let canMoveMap = wallPoints.every(p => {
             let gx = Math.floor(p.x / this.tileS);
             let gy = Math.floor(p.y / this.tileS);
-            return this.map[gy] && this.map[gy][gx] !== 1;
+            return this.map[gy] && this.map[gy][gx] !== 1 && this.map[gy][gx] !== 9;
         });
 
         if (!canMoveMap) return false;
