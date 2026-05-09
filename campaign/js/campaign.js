@@ -1,9 +1,9 @@
 import { CMlevels } from './maps.js'; 
-import { CampaignCamera } from './camera.js';     
+import { CampaignCamera } from './camera.js';    
 import { Movement } from './movement.js';
 import { Inventory } from './inventory.js';  
 import { Player } from './animate.js';
-import { Enemy } from './enemies.js';        ///////////////// IMPORTUJEMY CO NAM TRZEBA Z INNYCH PLIKOW /////////////////
+import { Enemy } from './enemies.js';         ///////////////// IMPORTUJEMY CO NAM TRZEBA Z INNYCH PLIKOW /////////////////
 import { Pause } from './pause.js';
 import { Fog } from './fog.js'; 
 import { Minimap } from './map.js';
@@ -16,7 +16,10 @@ let keys = {}; ///////////////// PRZECHOWYWANIE NACISNIETYCH KLAWISZY //////////
 canvas.width = window.innerWidth;
 canvas.height = window.innerHeight;
 
-const tileS = 90;  //////////////////// ROZMIAR KLATKI //////////////////////
+const tileS = 80;  //////////////////// ROZMIAR KLATKI //////////////////////  
+
+////////////////////// НАСТРОЙКА ПРИБЛИЖЕНИЯ (ZOOM) /////////////////////
+const zoom = 1; // 1.0 - стандарт, выше - ближе ///////////////////////
 
 let player = { x: 0, y: 0, pixelX: 0, pixelY: 0 }; //////////////////// DANE POZYCJI GRACZA ////////////////////
 let playerVisual = new Player(tileS); //////////////////// WIZUALIZACJA I ANIMACJA ////////////////////
@@ -185,11 +188,14 @@ function initLevel(index, spawnX = null, spawnY = null) {
     currentLevelIndex = index;
     
     //WAŻNE: Tworzymy „głęboką kopię” danych poziomu. 
-    // Teraz, если usuniemy element z kopii, pozostние on w oryginale (CMlevels).
+    // Teraz, jeśli usuniemy element z kopii, pozostnie on w oryginale (CMlevels).
     levelData = JSON.parse(JSON.stringify(CMlevels[currentLevelIndex]));
     
     map = levelData.grid;
     droppedItems = []; // Czyszczenie przedmiotów na ziemi przy zmianie poziomu/restarcie
+
+    // Находим максимальную ширину карты для корректной работы камеры и тумана
+    const maxWidth = Math.max(...map.map(row => row.length));
 
     if (spawnX !== null && spawnY !== null) {
         player.pixelX = spawnX * tileS;
@@ -218,9 +224,9 @@ function initLevel(index, spawnX = null, spawnY = null) {
         movement.map = map;
     }
     
-    fog = new Fog(map[0].length, map.length, tileS);
+    fog = new Fog(maxWidth, map.length, tileS);
 
-    camera = new CampaignCamera(canvas.width, canvas.height, map[0].length * tileS, map.length * tileS);
+    camera = new CampaignCamera(canvas.width, canvas.height, maxWidth * tileS, map.length * tileS);
 }
 
 
@@ -234,7 +240,6 @@ function draw() {
         movement.update(activeEnemies);
         playerVisual.updateAnimation(keys); //////////////////// AKTUALIZACJA KLATEK ANIMACJI ////////////////////
 
-        // Обновление тумана
         if (fog) fog.update(player.pixelX, player.pixelY);
 
         for (let enemy of activeEnemies) {
@@ -281,31 +286,44 @@ function draw() {
             isTeleporting = true;
             initLevel(portal.targetLevel, portal.targetX, portal.targetY);
             setTimeout(() => { isTeleporting = false; }, 1000);
-            requestAnimationFrame(draw);
-            return; 
         }
     }
 
     ctx.save();
-    ctx.translate(Math.floor(-camera.x), Math.floor(-camera.y));
+    
+    ////////// ПРИМЕНЕНИЕ ZOOM И ЦЕНТРИРОВАНИЕ //////////
+    ctx.scale(zoom, zoom);
 
-    /////////////////// RYSOWANIE MAPY ////////////////////
+    const maxWidth = Math.max(...map.map(row => row.length));
+
+    let camX = player.pixelX + (tileS / 2) - (canvas.width / 2) / zoom;
+    let camY = player.pixelY + (tileS / 2) - (canvas.height / 2) / zoom;
+
+    let maxCamX = (maxWidth * tileS) - (canvas.width / zoom);
+    let maxCamY = (map.length * tileS) - (canvas.height / zoom);
+    
+    camX = Math.max(0, Math.min(camX, maxCamX));
+    camY = Math.max(0, Math.min(camY, maxCamY));
+
+    ctx.translate(-Math.floor(camX), -Math.floor(camY));
+
+    ////////// РИСУЕМ КАРТУ КУБИКАМИ //////////
+    ctx.save();
     for (let y = 0; y < map.length; y++) {
         for (let x = 0; x < map[y].length; x++) {
-            if (map[y][x] === 1) {
-                ctx.fillStyle = "#333";
-            } else if (map[y][x] === 9) {
-                ctx.fillStyle = "black";
+            if (map[y][x] === 1 || map[y][x] === 9) {
+                ctx.fillStyle = "grey"; // Стены и границы
             } else if (map[y][x] === 2) {
-                ctx.fillStyle = "orange";
-            } else if (map[y][x] >= 4 && map[y][x] !== 9) {
-                ctx.fillStyle = "blue";
+                ctx.fillStyle = "orange"; // Сундук
+            } else if (map[y][x] >= 4) {
+                ctx.fillStyle = "blue"; // Портал
             } else {
-                ctx.fillStyle = "#eee";
+                ctx.fillStyle = "white"; // Пол
             }
             ctx.fillRect(x * tileS, y * tileS, tileS, tileS);
         }
     }
+    ctx.restore();
 
     ////////////////// RYSOWANIE PRZEDMIOTOW NA PODLODZE //////////////////
     for (let item of droppedItems) {
@@ -326,9 +344,6 @@ function draw() {
         enemy.draw(ctx);
     }
 
-    ////////// RYSUJEMY FogOfWar ////////////
-    if (fog) fog.draw(ctx, camera);
-
     ////////////////// RYSOWANIE ANIMOWANEGO GRACZA /////////////////
     if (isInvulnerable) {
         ctx.globalAlpha = (Math.floor(Date.now() / 100) % 2 === 0) ? 0.3 : 1.0;
@@ -337,25 +352,27 @@ function draw() {
     playerVisual.draw(ctx, player.pixelX, player.pixelY); 
     ctx.globalAlpha = 1.0; 
 
+    //////////  RYSUJEMY FogOfWar (ПОВЕРХ ВСЕГО) ////////////
+    if (fog) {
+        fog.draw(ctx, { x: camX, y: camY });
+    }
+
     ctx.restore();
 
     ////////////////// RYSOWANIE UI //////////////////
     inventory.draw();
 
-    ///// Rendering of the large map (now it is drawn only if isFullMap === true) /////
     if (minimap && fog) {
         minimap.draw(map, fog.visited, player.pixelX, player.pixelY, tileS);
     }
 
     ////////// OBRAZEK MAPY ///////////
     if (mapIcon.complete && !isDead && !minimap.isFullMap) {
-        const iconSize = 42;  //// rozmiar
+        const iconSize = 42;  
         const iconX = canvas.width - iconSize - 30;
         const iconY = canvas.height - iconSize - 50;
-
         ctx.drawImage(mapIcon, iconX, iconY, iconSize, iconSize);
 
-        ///// Тексt 'M' под obrazkiem /////
         ctx.fillStyle = "white";
         ctx.font = "bold 15px Arial";
         ctx.textAlign = "center";
@@ -391,11 +408,9 @@ function draw() {
         ctx.strokeRect(sX, sY, sWidth, sHeight);
     }
 
-    /// OKIENKO PAUSE ///
     pause.draw();
 
-    /////////////////////// DEATH EKRAN /////////////////////
-    if (isDead) {
+    if (isDead) {                                            
         if (deathAlpha < 1) deathAlpha += 0.01; 
         ctx.save();
         ctx.globalAlpha = deathAlpha;
@@ -404,7 +419,7 @@ function draw() {
 
         let imgW = 1536; 
         let imgH = 300; 
-
+                                                                                                                    ////////        442         ////////
         if (deathImage.complete) {
             ctx.drawImage(deathImage, canvas.width/2 - imgW/2, canvas.height/2 - imgH/2, imgW, imgH);
         }

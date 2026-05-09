@@ -7,10 +7,19 @@ export class Movement {
         
         this.speed = 4; 
         this.margin = 1; ////////////////// Чем меньше число, тем ближе он к стене /////////////////////
+
+        ////////////////// SETTINGS ХИТБОКСА //////////////////
+        this.hitboxL = 10;    // Отступ хитбокса от левого края тайла
+        this.hitboxR = 10;    // Отступ хитбокса от правого края тайла
+        this.hitboxT = 10;    // ОТСТУП ХИТБОКСА СВЕРХУ
+        this.hitboxB = 10;    // ОТСТУП ХИТБОКСА СНИЗУ
+        
+        this.offsetY = 0;      // Общая корректировка позиции (можно оставить 0)
+        this.wallMargin = 5;   // Запас при коллизии со стенами
         
         ///////////// STAMINA SETTINGS ///////////
-        this.stamina = 100;          //////// AKTUALNA ILOSC ///////
-        this.maxStamina = 100;       /////// MAKSYMALNA ILOSC //////
+        this.stamina = 200;          //////// AKTUALNA ILOSC ///////
+        this.maxStamina = 200;       /////// MAKSYMALNA ILOSC //////
         this.staminaConsum = 0.3;    ///////// ZURZYCIE STAMINY NA KLATKE PRZY BIEGU /////////
         this.staminaRegen = 0.2;     //////// REGENERACJA STAMINY ///////
         this.isExhausted = false;    //////// FLAGA CALKOWITEGO ZMECZENIA (пока не реген до 20) //////
@@ -70,18 +79,15 @@ export class Movement {
         }
     }
 
-    //////////// METODA DLA RYSOWANIA KRESKI STAMINY //////////////
     drawStamina(ctx, canvas) {
         let width = 200;
         let height = 20;
         let x = canvas.width - width - 20;
         let y = 20;
 
-        //// BACKGROUND KRESKI ////
         ctx.fillStyle = "rgba(0, 0, 0, 0.5)";
         ctx.fillRect(x, y, width, height);
 
-        ////// KOLOR ZMIENIA SIE PRZY ZMECZENIU //////
         ctx.fillStyle = this.isExhausted ? "red" : "yellow";
         let currentWidth = (this.stamina / this.maxStamina) * width;
         ctx.fillRect(x, y, currentWidth, height);
@@ -91,18 +97,19 @@ export class Movement {
         ctx.strokeRect(x, y, width, height);
     }
 
-    /////////// FUNKCJA POMOCNICZA DO SPRAWDZANIA KOLIZJI W KONKRETNYM PUNKCIE /////////////
-    canMoveTo(nx, ny, enemies) {
-        let hitboxSize = 60; 
-        let off = (this.tileS - hitboxSize) / 2; 
+    canMove(nx, ny, enemies) {
+        // Вычисляем границы аналогично ширине: отступ сверху и отступ снизу
+        let x1 = nx + this.hitboxL;
+        let x2 = nx + this.tileS - this.hitboxR;
+        let y1 = ny + this.hitboxT + this.offsetY;
+        let y2 = ny + this.tileS - this.hitboxB + this.offsetY;
 
-        /////// SPRAWDZANIE SCIAN Z ZAPASEM (zeby nie utknac w rogach) ///////
-        let wallMargin = 6; //////// O ILE PIKSELI HITBOX BEDZIE 'BARDZEJ USTEPLIWY' WOBEC SCIAN /////////
+        /////// SPRAWDZANIE SCIAN Z ZAPASEM ///////
         let wallPoints = [
-            { x: nx + off + wallMargin, y: ny + off + wallMargin },
-            { x: nx + off + hitboxSize - wallMargin, y: ny + off + wallMargin },
-            { x: nx + off + wallMargin, y: ny + off + hitboxSize - wallMargin },
-            { x: nx + off + hitboxSize - wallMargin, y: ny + off + hitboxSize - wallMargin }
+            { x: x1 + this.wallMargin, y: y1 + this.wallMargin },
+            { x: x2 - this.wallMargin, y: y1 + this.wallMargin },
+            { x: x1 + this.wallMargin, y: y2 - this.wallMargin },
+            { x: x2 - this.wallMargin, y: y2 - this.wallMargin }
         ];
 
         let canMoveMap = wallPoints.every(p => {
@@ -115,21 +122,26 @@ export class Movement {
 
         ///////// SPRAWDZANIE KOLIZJI Z WROGAMI /////////
         let playerHitboxNext = {
-            left: nx + off,
-            right: nx + off + hitboxSize,
-            top: ny + off,
-            bottom: ny + off + hitboxSize,
-            centerX: nx + off + hitboxSize / 2,
-            centerY: ny + off + hitboxSize / 2
+            left: x1,
+            right: x2,
+            top: y1,
+            bottom: y2,
+            centerX: (x1 + x2) / 2,
+            centerY: (y1 + y2) / 2
         };
 
+        let currX1 = this.player.pixelX + this.hitboxL;
+        let currX2 = this.player.pixelX + this.tileS - this.hitboxR;
+        let currY1 = this.player.pixelY + this.hitboxT + this.offsetY;
+        let currY2 = this.player.pixelY + this.tileS - this.hitboxB + this.offsetY;
+
         let playerHitboxCurrent = {
-            centerX: this.player.pixelX + off + hitboxSize / 2,
-            centerY: this.player.pixelY + off + hitboxSize / 2,
-            left: this.player.pixelX + off,
-            right: this.player.pixelX + off + hitboxSize,
-            top: this.player.pixelY + off,
-            bottom: this.player.pixelY + off + hitboxSize
+            left: currX1,
+            right: currX2,
+            top: currY1,
+            bottom: currY2,
+            centerX: (currX1 + currX2) / 2,
+            centerY: (currY1 + currY2) / 2
         };
 
         let collidesWithEnemy = enemies.some(enemy => {
@@ -167,15 +179,11 @@ export class Movement {
     }
 
     move(dx, dy, enemies = []) {
-        ////// PROBUJEMY PORUSZAC SIE OSOBNO WZDLUZ X, POTEM OSOBNO WZDLUZ Y
-        
-        //// PROBUJEMY ZASTOSOWAC RUCH PO X
-        if (this.canMoveTo(this.player.pixelX + dx, this.player.pixelY, enemies)) {
+        if (this.canMove(this.player.pixelX + dx, this.player.pixelY, enemies)) {
             this.player.pixelX += dx;
         }
 
-        //// PROBOJEMY ZASTOSOWAC RUCH PO Y
-        if (this.canMoveTo(this.player.pixelX, this.player.pixelY + dy, enemies)) {
+        if (this.canMove(this.player.pixelX, this.player.pixelY + dy, enemies)) {
             this.player.pixelY += dy;
         }
 

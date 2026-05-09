@@ -6,7 +6,7 @@ export class Fog {
 
         //////////// SETTINGS ///////////
         this.config = {
-            revealRadius: 3,         
+            revealRadius: 5,         
             fogColor: 'black',       
             opacity: 1.0,            
             smoothReveal: true       
@@ -39,15 +39,27 @@ export class Fog {
         ctx.fillStyle = this.config.fogColor;
         ctx.globalAlpha = this.config.opacity;
 
+        // Если в объекте camera нет width/height (из-за зума), используем размеры canvas
+        const viewW = camera.width || ctx.canvas.width;
+        const viewH = camera.height || ctx.canvas.height;
+
         const startX = Math.max(0, Math.floor(camera.x / this.tileSize));
         const startY = Math.max(0, Math.floor(camera.y / this.tileSize));
-        const endX = Math.min(this.mapWidth, Math.ceil((camera.x + camera.width) / this.tileSize));
-        const endY = Math.min(this.mapHeight, Math.ceil((camera.y + camera.height) / this.tileSize));
+        
+        // Добавляем запас +2, чтобы туман не обрезался по краям при движении
+        const endX = Math.min(this.mapWidth, Math.ceil((camera.x + viewW) / this.tileSize) + 2);
+        const endY = Math.min(this.mapHeight, Math.ceil((camera.y + viewH) / this.tileSize) + 2);
 
         for (let y = startY; y < endY; y++) {
             for (let x = startX; x < endX; x++) {
                 if (!this.visited[y][x]) {
-                    ctx.fillRect(x * this.tileSize, y * this.tileSize, this.tileSize + 1, this.tileSize + 1);
+                    // Используем Math.floor для отрисовки, чтобы не было щелей между плитками
+                    ctx.fillRect(
+                        x * this.tileSize, 
+                        y * this.tileSize, 
+                        this.tileSize + 1, 
+                        this.tileSize + 1
+                    );
                 }
             }
         }

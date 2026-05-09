@@ -3,7 +3,7 @@ export class Minimap {
         this.canvas = canvas;
         this.ctx = ctx;
         this.mapTileSize = 15; 
-        this.fullMapTileSize = 30; ///// rozmiar kafelka dla duzej mapy /////
+        this.fullMapTileSize = 30; ///// maksymalny rozmiar kafelka dla duzej mapy /////
         this.margin = 20;
         this.isFullMap = false; ///// domyslnie zamkniete //
     }
@@ -19,7 +19,18 @@ export class Minimap {
         const rows = grid.length;
         const cols = grid[0].length;
 
-        const currentTileSize = this.fullMapTileSize;
+        // Определяем максимально допустимую ширину и высоту карты на экране (с отступами)
+        const maxMapWidth = this.canvas.width - 100; 
+        const maxMapHeight = this.canvas.height - 150; 
+
+        // Высчитываем динамический размер ячейки, чтобы карта ВСЕГДА влезала в экран
+        let currentTileSize = Math.min(maxMapWidth / cols, maxMapHeight / rows);
+
+        // Чтобы маленькие карты не рисовались гигантскими кубами, ограничиваем максимальный размер
+        if (currentTileSize > this.fullMapTileSize) {
+            currentTileSize = this.fullMapTileSize;
+        }
+
         const mapW = cols * currentTileSize;
         const mapH = rows * currentTileSize;
 
@@ -73,11 +84,14 @@ export class Minimap {
         const pX = (playerX / gameTileSize) * currentTileSize + (currentTileSize / 2);
         const pY = (playerY / gameTileSize) * currentTileSize + (currentTileSize / 2);
         
+        // Делаем размер маркера игрока зависимым от масштаба (но не меньше 3 пикселей)
+        let playerRadius = Math.max(3, currentTileSize / 3);
+
         this.ctx.fillStyle = "red";
         this.ctx.shadowBlur = 15;
         this.ctx.shadowColor = "red";
         this.ctx.beginPath();
-        this.ctx.arc(startX + pX, startY + pY, 8, 0, Math.PI * 2);
+        this.ctx.arc(startX + pX, startY + pY, playerRadius, 0, Math.PI * 2);
         this.ctx.fill();
         this.ctx.shadowBlur = 0;
 
