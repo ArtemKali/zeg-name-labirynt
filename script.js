@@ -2,7 +2,7 @@ const menu = document.getElementById("menu");
 const screen = document.getElementById("screen");
 
 const music = new Audio("sounds/aruarian.mp3"); // OBJEKT MUZYKI
-music.play(); // wlaczyc muzyke
+// music.play(); // wlaczyc muzyke (ЗАКОММЕНТИРОВАНО: музыка включится только после интро)
 
 const mapBackgrounds = {
         Castle: "videos/Castle.mp4",
@@ -263,24 +263,6 @@ function setVolume(volume) {
   music.volume = volume;
 }
 
-let musicStarted = false;
-
-document.addEventListener("click", () => {
-  if (!musicStarted) {
-    music.loop = true;
-
-    const savedVolume = localStorage.getItem("gameVolume") || 0.5;
-    setVolume(savedVolume);
-
-    music.play().catch(() => {
-      console.log("Autoplay blocked");
-    });
-
-    musicStarted = true;
-  }
-});
-
-
 ///////* МУЗЫКА ПРИ ЗАГРУЗКЕ *///////
 window.addEventListener("load", () => {
   const savedVolume = localStorage.getItem("gameVolume") || 0.5;
@@ -308,5 +290,86 @@ function startCampaign() {
   music.pause();
 }
 
-//////////* START *///////////
-setMenu("main");
+//=================================================================================================================================================
+//=========================================== LOGIKA WIDEO INTRO I URUCHAMIANIA MENU ===================================================================
+
+let introStarted = false;
+let musicStarted = false;
+
+////// POCZATKOWO UKRYWAMY MENU /////
+menu.style.display = "none";
+
+////// TWORZYMY CZARNY EKRAN "PRESS F11" //////
+const f11Overlay = document.createElement("div");
+f11Overlay.style.position = "fixed";
+f11Overlay.style.top = "0";
+f11Overlay.style.left = "0";
+f11Overlay.style.width = "100vw";
+f11Overlay.style.height = "100vh";
+f11Overlay.style.backgroundColor = "black";
+f11Overlay.style.color = "white";
+f11Overlay.style.display = "flex";
+f11Overlay.style.justifyContent = "center";
+f11Overlay.style.alignItems = "center";
+f11Overlay.style.fontSize = "40px";
+f11Overlay.style.fontFamily = "Arial, sans-serif";
+f11Overlay.style.zIndex = "10000"; // Wyżej niż wideo
+f11Overlay.textContent = "Press F11 to start";
+document.body.appendChild(f11Overlay);
+
+////// TWORZYMY ELEMNT WIDEO DO INTRO ///////
+const introVideo = document.createElement("video");
+introVideo.src = "videos/intro.mp4";
+introVideo.style.position = "fixed";
+introVideo.style.top = "0";
+introVideo.style.left = "0";
+introVideo.style.width = "100vw";
+introVideo.style.height = "100vh";
+introVideo.style.objectFit = "cover"; 
+introVideo.style.zIndex = "9999";
+introVideo.style.backgroundColor = "black";
+document.body.appendChild(introVideo);
+
+////// OBSŁUGA NACIŚNIĘCIA F11 //////
+window.addEventListener("keydown", (e) => {
+    if (e.key === "F11") {
+        if (f11Overlay) {
+            f11Overlay.remove(); // Usuwamy czarny ekran
+            startIntroSequence();
+        }
+    }
+});
+
+function startIntroSequence() {
+    if (!introStarted) {
+        introStarted = true;
+        introVideo.play().catch(() => {
+            console.log("Autoplay blocked");
+            finishIntro();
+        });
+
+        introVideo.onended = () => {
+            finishIntro();
+        };
+    }
+}
+
+///// Logika przejścia do menu głównego ///
+function finishIntro() {
+  introVideo.remove();
+  menu.style.display = "";
+  setMenu("main");
+
+  ///////// WLACZAMY MUZYKE ////////
+  if (!musicStarted) {
+    music.loop = true;
+    const savedVolume = localStorage.getItem("gameVolume") || 0.5;
+    setVolume(savedVolume);
+
+    music.play().catch(() => {
+      console.log("Autoplay blocked");
+    });
+
+    musicStarted = true;
+  }
+}
