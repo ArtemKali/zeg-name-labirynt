@@ -290,7 +290,7 @@ function startCampaign() {
 }
 
 //=================================================================================================================================================
-//=========================================== LOGIKA WIDEO INTRO I URUCHAMIANIA MENU ===================================================================
+//=========================================== LOGIKA INTRO I URUCHAMIANIA MENU ===================================================================
 
 let introStarted = false;
 let musicStarted = false;
@@ -353,24 +353,28 @@ function startIntroSequence() {
     }
 }
 
-//=========================================== LOADING LOGIC (INTEGRATED) ===================================================================
+// =========================================== LOADING LOGIC  =================================================================== //
 
 function finishIntro() {
-  introVideo.remove();
+  ////////// NAJPIERW URUCHAMIAMY POBIERANIE //////
+  startLoadingProcess();
   
-  ////// GENERUJEMY MENU OD RAZU ALE ONO ZNAJDUJE SIE POD LOADING //////
+  /////// PRZYGOTOWUJEMY PRZYCISKI MENU W TLE //////
   menu.style.display = ""; 
   setMenu("main"); 
   
-  startLoadingProcess();
+  //////// TYLKO PO TYM USUWAMY INTRO  ///////
+  setTimeout(() => {
+     if (introVideo) introVideo.remove();
+  }, 100);
 }
 
 function startLoadingProcess() {
     
     ////////// PROCENT SETINGS /////////
     const rarity = {
-        fast: 40,    // wolna
-        medium: 50,  // srednia
+        fast: 50,    // wolna
+        medium: 40,  // srednia
         slow: 10     // slow
     };
 
@@ -388,24 +392,39 @@ function startLoadingProcess() {
     const overlay = document.createElement("div");
     overlay.style.cssText = `
         position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
-        background: black; display: flex; flex-direction: column;
+        display: flex; flex-direction: column;
         justify-content: center; align-items: center; z-index: 10001;
-        cursor: default;
+        cursor: default; overflow: hidden;
     `;
+
+    ///////////////// TWORZYMY OSOBNA WARSTWE DLA ROZMYTEGO TLA /////////////// (menu.png)
+    const blurBackground = document.createElement("div");
+    blurBackground.style.cssText = `
+        position: absolute; top: -10%; left: -10%; width: 120%; height: 120%;
+        background-image: url('pictures/menu.png');
+        background-size: cover;
+        background-position: center;
+        filter: blur(20px);
+        z-index: -1;
+    `;
+
+    overlay.appendChild(blurBackground);
 
     const text = document.createElement("div");
     text.style.cssText = `
         color: white; font-family: Arial, sans-serif; font-size: 18px;
         letter-spacing: 2px; margin-bottom: 12px; width: 320px; text-align: left;
+        position: relative;
     `;
     text.textContent = "LOADING...";
 
     const barBorder = document.createElement("div");
     barBorder.style.cssText = `
-        width: 320px; height: 30px; border: 2px solid white;
+        width: 320px; height: 30px; border: 3px solid white;
         padding: 4px; box-sizing: border-box; display: flex; 
-        gap: 4px; background: black; align-items: center;
-        overflow: hidden;
+        gap: 4px; background: rgba(0,0,0,0.8); align-items: center;
+        overflow: hidden; box-shadow: 0 0 15px rgba(0,0,0,0.5);
+        position: relative;
     `;
 
     overlay.appendChild(text);
@@ -430,7 +449,7 @@ function startLoadingProcess() {
         while (blocksSpawned < blocksNeeded) {
             const imgBlock = document.createElement("img");
             imgBlock.src = "pictures/1.png"; 
-            imgBlock.style.cssText = "height: 100%; width: auto; display: block; object-fit: contain;";
+            imgBlock.style.cssText = "height: 100%; width: auto; display: block; object-fit: contain; image-rendering: pixelated;";
             barBorder.appendChild(imgBlock);
             blocksSpawned++;
         }
@@ -438,12 +457,12 @@ function startLoadingProcess() {
         if (progress >= 100) {
             clearInterval(interval);
             
-            ///////// Запускаем музыку прямо перед исчезновением оверлея /////////
             activateMusic();
 
             setTimeout(() => {
                 overlay.style.transition = "opacity 0.6s ease";
                 overlay.style.opacity = "0";
+                
                 setTimeout(() => {
                     overlay.remove();
                 }, 600);
