@@ -283,7 +283,6 @@ function startGame(difficulty) {
 
 //////* START CAMPAIGN *///////
 function startCampaign() {
-  music.pause();
 
   window.location.href = "campaign/index.html";
 
@@ -334,7 +333,7 @@ document.body.appendChild(introVideo);
 window.addEventListener("keydown", (e) => {
     if (e.key === "F11") {
         if (f11Overlay) {
-            f11Overlay.remove(); // Usuwamy czarny ekran
+            f11Overlay.remove(); // Usuwamy czarny экран
             startIntroSequence();
         }
     }
@@ -354,22 +353,111 @@ function startIntroSequence() {
     }
 }
 
-///// Logika przejścia do menu głównego ///
+//=========================================== LOADING LOGIC (INTEGRATED) ===================================================================
+
 function finishIntro() {
   introVideo.remove();
-  menu.style.display = "";
-  setMenu("main");
+  
+  ////// GENERUJEMY MENU OD RAZU ALE ONO ZNAJDUJE SIE POD LOADING //////
+  menu.style.display = ""; 
+  setMenu("main"); 
+  
+  startLoadingProcess();
+}
 
-  ///////// WLACZAMY MUZYKE ////////
+function startLoadingProcess() {
+    
+    ////////// PROCENT SETINGS /////////
+    const rarity = {
+        fast: 40,    // wolna
+        medium: 50,  // srednia
+        slow: 10     // slow
+    };
+
+    let speedProfile;
+    const roll = Math.random() * 100; ////// losuje od 0 do 100 //////
+
+    if (roll <= rarity.fast) {
+        speedProfile = 1; 
+    } else if (roll <= (rarity.fast + rarity.medium)) {
+        speedProfile = 2; 
+    } else {
+        speedProfile = 3; 
+    }
+
+    const overlay = document.createElement("div");
+    overlay.style.cssText = `
+        position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+        background: black; display: flex; flex-direction: column;
+        justify-content: center; align-items: center; z-index: 10001;
+        cursor: default;
+    `;
+
+    const text = document.createElement("div");
+    text.style.cssText = `
+        color: white; font-family: Arial, sans-serif; font-size: 18px;
+        letter-spacing: 2px; margin-bottom: 12px; width: 320px; text-align: left;
+    `;
+    text.textContent = "LOADING...";
+
+    const barBorder = document.createElement("div");
+    barBorder.style.cssText = `
+        width: 320px; height: 30px; border: 2px solid white;
+        padding: 4px; box-sizing: border-box; display: flex; 
+        gap: 4px; background: black; align-items: center;
+        overflow: hidden;
+    `;
+
+    overlay.appendChild(text);
+    overlay.appendChild(barBorder);
+    document.body.appendChild(overlay);
+
+    let progress = 0;
+    const maxBlocks = 18; 
+    let blocksSpawned = 0;
+
+    const interval = setInterval(() => {
+        let step = 0;
+        if (speedProfile === 1) step = Math.random() * 8;
+        if (speedProfile === 2) step = Math.random() * 3;
+        if (speedProfile === 3) step = progress > 80 ? Math.random() * 0.4 : Math.random() * 2.5;
+
+        progress += step;
+        if (progress > 100) progress = 100;
+
+        const blocksNeeded = Math.floor((progress / 100) * maxBlocks);
+
+        while (blocksSpawned < blocksNeeded) {
+            const imgBlock = document.createElement("img");
+            imgBlock.src = "pictures/1.png"; 
+            imgBlock.style.cssText = "height: 100%; width: auto; display: block; object-fit: contain;";
+            barBorder.appendChild(imgBlock);
+            blocksSpawned++;
+        }
+
+        if (progress >= 100) {
+            clearInterval(interval);
+            
+            ///////// Запускаем музыку прямо перед исчезновением оверлея /////////
+            activateMusic();
+
+            setTimeout(() => {
+                overlay.style.transition = "opacity 0.6s ease";
+                overlay.style.opacity = "0";
+                setTimeout(() => {
+                    overlay.remove();
+                }, 600);
+            }, 500);
+        }
+    }, 70);
+}
+
+function activateMusic() {
   if (!musicStarted) {
     music.loop = true;
     const savedVolume = localStorage.getItem("gameVolume") || 0.5;
     setVolume(savedVolume);
-
-    music.play().catch(() => {
-      console.log("Autoplay blocked");
-    });
-
+    music.play().catch(() => console.log("Autoplay blocked"));
     musicStarted = true;
   }
 }
