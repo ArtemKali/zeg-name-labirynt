@@ -81,7 +81,7 @@ export class Enemy {
             let gy = Math.floor(checkY / this.tileS);
 
             ///////// SCIANA BLOKUJE WIDOK /////////
-            if (this.map[gy] && (this.map[gy][gx] === 1 || this.map[gy][gx] === 9)) return false; 
+            if (this.map[gy] && (this.map[gy][gx] === 1 || this.map[gy][gx] === 9 || this.map[gy][gx] === 10)) return false; 
         }
 
         return true;
@@ -94,7 +94,8 @@ export class Enemy {
         if (this.map[targetY] === undefined || 
             this.map[targetY][targetX] === undefined || 
             this.map[targetY][targetX] === 1 ||
-            this.map[targetY][targetX] === 9) return [];
+            this.map[targetY][targetX] === 9 ||
+            this.map[targetY][targetX] === 10) return [];
 
         let openSet = [{ x: startX, y: startY, g: 0, f: 0, parent: null }];
         let closedSet = new Set();
@@ -128,25 +129,25 @@ export class Enemy {
             ///////// RUCH KRZYZOWY I DIAGONALNY /////////
             let neighbors = [];
             
-            let canUp = this.map[current.y - 1] !== undefined && this.map[current.y - 1][current.x] !== 1 && this.map[current.y - 1][current.x] !== 9;
-            let canDown = this.map[current.y + 1] !== undefined && this.map[current.y + 1][current.x] !== 1 && this.map[current.y + 1][current.x] !== 9;
-            let canLeft = this.map[current.y][current.x - 1] !== 1 && this.map[current.y][current.x - 1] !== 9;
-            let canRight = this.map[current.y][current.x + 1] !== 1 && this.map[current.y][current.x + 1] !== 9;
+            let canUp = this.map[current.y - 1] !== undefined && this.map[current.y - 1][current.x] !== 1 && this.map[current.y - 1][current.x] !== 9 && this.map[current.y - 1][current.x] !== 10;
+            let canDown = this.map[current.y + 1] !== undefined && this.map[current.y + 1][current.x] !== 1 && this.map[current.y + 1][current.x] !== 9 && this.map[current.y + 1][current.x] !== 10;
+            let canLeft = this.map[current.y][current.x - 1] !== 1 && this.map[current.y][current.x - 1] !== 9 && this.map[current.y][current.x - 1] !== 10;
+            let canRight = this.map[current.y][current.x + 1] !== 1 && this.map[current.y][current.x + 1] !== 9 && this.map[current.y][current.x + 1] !== 10;
 
-            // Zwykle ruchy (koszt = 1)
+            // Zwykle ruchy (cost = 1)
             if (canUp) neighbors.push({ x: current.x, y: current.y - 1, cost: 1 });
             if (canDown) neighbors.push({ x: current.x, y: current.y + 1, cost: 1 });
             if (canLeft) neighbors.push({ x: current.x - 1, y: current.y, cost: 1 });
             if (canRight) neighbors.push({ x: current.x + 1, y: current.y, cost: 1 });
 
             // Przekątne (koszt = 1.414). Zablokowane, jeśli sąsiednie ściany tworzą ciasny kąt
-            if (canUp && canLeft && this.map[current.y - 1][current.x - 1] !== 1 && this.map[current.y - 1][current.x - 1] !== 9)
+            if (canUp && canLeft && this.map[current.y - 1][current.x - 1] !== 1 && this.map[current.y - 1][current.x - 1] !== 9 && this.map[current.y - 1][current.x - 1] !== 10)
                 neighbors.push({ x: current.x - 1, y: current.y - 1, cost: 1.414 });
-            if (canUp && canRight && this.map[current.y - 1][current.x + 1] !== 1 && this.map[current.y - 1][current.x + 1] !== 9)
+            if (canUp && canRight && this.map[current.y - 1][current.x + 1] !== 1 && this.map[current.y - 1][current.x + 1] !== 9 && this.map[current.y - 1][current.x + 1] !== 10)
                 neighbors.push({ x: current.x + 1, y: current.y - 1, cost: 1.414 });
-            if (canDown && canLeft && this.map[current.y + 1][current.x - 1] !== 1 && this.map[current.y + 1][current.x - 1] !== 9)
+            if (canDown && canLeft && this.map[current.y + 1][current.x - 1] !== 1 && this.map[current.y + 1][current.x - 1] !== 9 && this.map[current.y + 1][current.x - 1] !== 10)
                 neighbors.push({ x: current.x - 1, y: current.y + 1, cost: 1.414 });
-            if (canDown && canRight && this.map[current.y + 1][current.x + 1] !== 1 && this.map[current.y + 1][current.x + 1] !== 9)
+            if (canDown && canRight && this.map[current.y + 1][current.x + 1] !== 1 && this.map[current.y + 1][current.x + 1] !== 9 && this.map[current.y + 1][current.x + 1] !== 10)
                 neighbors.push({ x: current.x + 1, y: current.y + 1, cost: 1.414 });
 
             for (let n of neighbors) {
@@ -182,7 +183,7 @@ export class Enemy {
         for (let y = 0; y < this.map.length; y++) {
             for (let x = 0; x < this.map[y].length; x++) {
 
-                if (this.map[y][x] !== 1 && this.map[y][x] !== 9 && this.map[y][x] !== 2 && this.map[y][x] < 4) {
+                if (this.map[y][x] !== 1 && this.map[y][x] !== 9 && this.map[y][x] !== 10 && this.map[y][x] !== 2 && this.map[y][x] < 4) {
                     
                     let isCurrent = (x === currentX && y === currentY);
                     let inHistory = this.visitedPoints.some(p => p.x === x && p.y === y);
@@ -206,7 +207,7 @@ export class Enemy {
 
         ///////// HISTORIA /////////
         this.visitedPoints.push(chosenPoint);
-        if (this.visitedPoints.length > 7) {          /////////// ILOSC ZAPAMIETANYCH KLATEK /////// 
+        if (this.visitedPoints.length > 7) {           /////////// ILOSC ZAPAMIETANYCH KLATEK /////// 
             this.visitedPoints.shift();
         }
 

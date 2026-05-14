@@ -7,6 +7,7 @@ import { Enemy } from './enemies.js';         ///////////////// IMPORTUJEMY CO N
 import { Pause } from './pause.js';
 import { Fog } from './fog.js'; 
 import { Minimap } from './map.js';
+import { Keys } from './keys.js';
 
 const canvas = document.getElementById("campaign");
 const ctx = canvas.getContext("2d");
@@ -54,6 +55,9 @@ const inventory = new Inventory(canvas, ctx);
 
 ////////////////////// ИНИЦИАЛИЗИРУЕМ ПАУЗУ /////////////////////
 const pause = new Pause(canvas, ctx);
+
+////////////////////// ИНИЦИАЛИЗИРУЕМ ДВЕРИ /////////////////////
+const doorKey = new Keys(tileS, inventory);
 
 let droppedItems = []; //////// PRZECHOWYWANIE WYRZUCONYCH PRZEDMIOTOW ////////
 
@@ -109,9 +113,16 @@ window.addEventListener("keydown", (e) => {
             inventory.currentChest = null;
         } else if (!inventory.isOpen && !pause.isPaused && !minimap.isFullMap) {
             // Najpierw próbujemy поднять предмет с земли, если его нет - проверяем сундук //
-            if (!checkPickUpItem()) {
-                checkChestInteraction();
+            if (checkPickUpItem()) return;
+
+            // --- Logika Drzwi ---
+            if (doorKey.OpenDoor(player, map)) {
+                movement.map = map; 
+                activeEnemies.forEach(en => en.map = map);
+                return;
             }
+
+            checkChestInteraction();
         }
     }
 
@@ -194,7 +205,7 @@ function initLevel(index, spawnX = null, spawnY = null) {
     map = levelData.grid;
     droppedItems = []; // Czyszczenie przedmiotów na ziemi przy zmianie poziomu/restarcie
 
-    // Находим максимальную ширину карты для корректной работы камеры и тумана
+    /// Находим максимальную ширину карты для корректной работы камеры и тумана
     const maxWidth = Math.max(...map.map(row => row.length));
 
     if (spawnX !== null && spawnY !== null) {
@@ -280,7 +291,7 @@ function draw() {
     let gridX = Math.floor((player.pixelX + tileS / 2) / tileS);
     let gridY = Math.floor((player.pixelY + 45) / tileS);
     
-    if (map[gridY] && map[gridY][gridX] >= 4 && map[gridY][gridX] !== 9 && !isTeleporting && !isDead && !pause.isPaused && !minimap.isFullMap) {
+    if (map[gridY] && map[gridY][gridX] >= 4 && map[gridY][gridX] < 10 && map[gridY][gridX] !== 9 && !isTeleporting && !isDead && !pause.isPaused && !minimap.isFullMap) {
         const portal = levelData.portals[map[gridY][gridX]];
         if (portal) {
             isTeleporting = true;
@@ -315,7 +326,11 @@ function draw() {
                 ctx.fillStyle = "grey"; // Стены и границы
             } else if (map[y][x] === 2) {
                 ctx.fillStyle = "orange"; // Сундук
-            } else if (map[y][x] >= 4) {
+            } else if (map[y][x] === 10) {
+                ctx.fillStyle = "#5D4037"; // Закрытая дверь
+            } else if (map[y][x] === 11) {
+                ctx.fillStyle = "#A1887F"; // Открытая дверь
+            } else if (map[y][x] >= 4 && map[y][x] < 10) {
                 ctx.fillStyle = "blue"; // Портал
             } else {
                 ctx.fillStyle = "white"; // Пол
@@ -419,7 +434,7 @@ function draw() {
 
         let imgW = 1536; 
         let imgH = 300; 
-                                                                                                                    ////////        442         ////////
+                                                                                                                                 ////////        442         ////////
         if (deathImage.complete) {
             ctx.drawImage(deathImage, canvas.width/2 - imgW/2, canvas.height/2 - imgH/2, imgW, imgH);
         }
