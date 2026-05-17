@@ -3,11 +3,11 @@ import { CampaignCamera } from './camera.js';
 import { Movement } from './movement.js';
 import { Inventory } from './inventory.js';  
 import { Player } from './animate.js';
-import { Enemy } from './enemies.js';         ///////////////// IMPORTUJEMY CO NAM TRZEBA Z INNYCH PLIKOW /////////////////
+import { Enemy } from './enemies.js';          ///////////////// IMPORTUJEMY CO NAM TRZEBA Z INNYCH PLIKOW /////////////////
 import { Pause } from './pause.js';
 import { Fog } from './fog.js'; 
 import { Minimap } from './map.js';
-import { Keys } from './keys.js';
+import { Doors } from './doors.js';
 
 const canvas = document.getElementById("campaign");
 const ctx = canvas.getContext("2d");
@@ -20,7 +20,7 @@ canvas.height = window.innerHeight;
 const tileS = 80;  //////////////////// ROZMIAR KLATKI //////////////////////  
 
 ////////////////////// НАСТРОЙКА ПРИБЛИЖЕНИЯ (ZOOM) /////////////////////
-const zoom = 1; // 1.0 - стандарт, выше - ближе ///////////////////////
+const zoom = 1; // 1.0 - standard, wyżej - bliżej ///////////////////////
 
 let player = { x: 0, y: 0, pixelX: 0, pixelY: 0 }; //////////////////// DANE POZYCJI GRACZA ////////////////////
 let playerVisual = new Player(tileS); //////////////////// WIZUALIZACJA I ANIMACJA ////////////////////
@@ -57,7 +57,7 @@ const inventory = new Inventory(canvas, ctx);
 const pause = new Pause(canvas, ctx);
 
 ////////////////////// ИНИЦИАЛИЗИРУЕМ ДВЕРИ /////////////////////
-const doorKey = new Keys(tileS, inventory);
+const doorsMechanic = new Doors(tileS); ///// ИЗМЕНЕНО ПОД НОВЫЙ КОД /////
 
 let droppedItems = []; //////// PRZECHOWYWANIE WYRZUCONYCH PRZEDMIOTOW ////////
 
@@ -68,6 +68,21 @@ inventory.onDropItem = (itemName) => {
         x: player.pixelX + tileS / 4,
         y: player.pixelY + tileS / 4
     });
+};
+
+////////////////////// LOGIKA UZYWANIA PRZEDMIOTOW Z INWENTARZA /////////////////////
+inventory.onUseItem = (itemName) => {
+    // Проверяем, является ли предмет ключом
+    if (itemName.toLowerCase().includes("key") || itemName.toLowerCase().includes("ключ")) {
+        // Вызываем функцию, которая удалит ТОЛЬКО этот конкретный ключ
+        if (doorsMechanic.useKeyOnDoor(player, map, inventory, itemName)) {
+            movement.map = map;
+            activeEnemies.forEach(en => en.map = map);
+            inventory.isOpen = false; 
+            return true; // Сообщаем инвентарю, что предмет использован успешно
+        }
+    }
+    return false;
 };
 
 let camera = null;
@@ -116,7 +131,8 @@ window.addEventListener("keydown", (e) => {
             if (checkPickUpItem()) return;
 
             // --- Logika Drzwi ---
-            if (doorKey.OpenDoor(player, map)) {
+            ///// ИЗМЕНЕНО: Вызываем функцию проверки двери перед собой /////
+            if (doorsMechanic.tryOpenDoor(player, map, inventory)) {
                 movement.map = map; 
                 activeEnemies.forEach(en => en.map = map);
                 return;
@@ -434,7 +450,7 @@ function draw() {
 
         let imgW = 1536; 
         let imgH = 300; 
-                                                                                                                                 ////////        442         ////////
+                                                                                                              ////////        442          ////////
         if (deathImage.complete) {
             ctx.drawImage(deathImage, canvas.width/2 - imgW/2, canvas.height/2 - imgH/2, imgW, imgH);
         }
