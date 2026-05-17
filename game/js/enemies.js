@@ -87,7 +87,7 @@ export class Enemy {
         return true;
     }
 
-    //////////// PATHFINDING (A*) ////////////
+    //////////// PATHFINDING (A*) OŚMIOKIERUNKOWY ////////////
     findPath(startX, startY, targetX, targetY) {
 
         ///////// CEL W SCIANIE /////////
@@ -99,7 +99,12 @@ export class Enemy {
         let openSet = [{ x: startX, y: startY, g: 0, f: 0, parent: null }];
         let closedSet = new Set();
 
-        let heuristic = (x1, y1, x2, y2) => Math.abs(x1 - x2) + Math.abs(y1 - y2);
+        ///////// Heurystyka Octile /////////
+        let heuristic = (x1, y1, x2, y2) => {
+            let dx = Math.abs(x1 - x2);
+            let dy = Math.abs(y1 - y2);
+            return dx + dy + (1.414 - 2) * Math.min(dx, dy);
+        };
 
         while (openSet.length > 0) {
             openSet.sort((a, b) => a.f - b.f);
@@ -120,20 +125,35 @@ export class Enemy {
 
             closedSet.add(`${current.x},${current.y}`);
 
-            ///////// RUCH KRZYZOWY /////////
-            let neighbors = [
-                { x: current.x, y: current.y - 1 },
-                { x: current.x, y: current.y + 1 },
-                { x: current.x - 1, y: current.y },
-                { x: current.x + 1, y: current.y }
-            ];
+            ///////// RUCH KRZYZOWY I DIAGONALNY /////////
+            let neighbors = [];
+            
+            let canUp = this.map[current.y - 1] !== undefined && this.map[current.y - 1][current.x] !== 1 && this.map[current.y - 1][current.x] !== 9;
+            let canDown = this.map[current.y + 1] !== undefined && this.map[current.y + 1][current.x] !== 1 && this.map[current.y + 1][current.x] !== 9;
+            let canLeft = this.map[current.y][current.x - 1] !== 1 && this.map[current.y][current.x - 1] !== 9;
+            let canRight = this.map[current.y][current.x + 1] !== 1 && this.map[current.y][current.x + 1] !== 9;
+
+            // Zwykle ruchy (koszt = 1)
+            if (canUp) neighbors.push({ x: current.x, y: current.y - 1, cost: 1 });
+            if (canDown) neighbors.push({ x: current.x, y: current.y + 1, cost: 1 });
+            if (canLeft) neighbors.push({ x: current.x - 1, y: current.y, cost: 1 });
+            if (canRight) neighbors.push({ x: current.x + 1, y: current.y, cost: 1 });
+
+            // Przekątne (koszt = 1.414). Zablokowane, jeśli sąsiednie ściany tworzą ciasny kąt
+            if (canUp && canLeft && this.map[current.y - 1][current.x - 1] !== 1 && this.map[current.y - 1][current.x - 1] !== 9)
+                neighbors.push({ x: current.x - 1, y: current.y - 1, cost: 1.414 });
+            if (canUp && canRight && this.map[current.y - 1][current.x + 1] !== 1 && this.map[current.y - 1][current.x + 1] !== 9)
+                neighbors.push({ x: current.x + 1, y: current.y - 1, cost: 1.414 });
+            if (canDown && canLeft && this.map[current.y + 1][current.x - 1] !== 1 && this.map[current.y + 1][current.x - 1] !== 9)
+                neighbors.push({ x: current.x - 1, y: current.y + 1, cost: 1.414 });
+            if (canDown && canRight && this.map[current.y + 1][current.x + 1] !== 1 && this.map[current.y + 1][current.x + 1] !== 9)
+                neighbors.push({ x: current.x + 1, y: current.y + 1, cost: 1.414 });
 
             for (let n of neighbors) {
                 if (n.y < 0 || n.y >= this.map.length || n.x < 0 || n.x >= this.map[0].length) continue;
-                if (this.map[n.y][n.x] === 1 || this.map[n.y][n.x] === 9) continue;
                 if (closedSet.has(`${n.x},${n.y}`)) continue;
 
-                let gScore = current.g + 1;
+                let gScore = current.g + n.cost;
                 let hScore = heuristic(n.x, n.y, targetX, targetY);
                 let fScore = gScore + hScore;
 
@@ -186,7 +206,7 @@ export class Enemy {
 
         ///////// HISTORIA /////////
         this.visitedPoints.push(chosenPoint);
-        if (this.visitedPoints.length > 7) {
+        if (this.visitedPoints.length > 7) {          /////////// ILOSC ZAPAMIETANYCH KLATEK /////// 
             this.visitedPoints.shift();
         }
 
