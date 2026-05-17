@@ -57,7 +57,7 @@ const inventory = new Inventory(canvas, ctx);
 const pause = new Pause(canvas, ctx);
 
 ////////////////////// ИНИЦИАЛИЗИРУЕМ ДВЕРИ /////////////////////
-const doorsMechanic = new Doors(tileS); ///// ИЗМЕНЕНО ПОД НОВЫЙ КОД /////
+const doorsMechanic = new Doors(tileS); ///// ИЗМЕНЕНО ПОД НОВЫЙ COД /////
 
 let droppedItems = []; //////// PRZECHOWYWANIE WYRZUCONYCH PRZEDMIOTOW ////////
 
@@ -72,14 +72,14 @@ inventory.onDropItem = (itemName) => {
 
 ////////////////////// LOGIKA UZYWANIA PRZEDMIOTOW Z INWENTARZA /////////////////////
 inventory.onUseItem = (itemName) => {
-    // Проверяем, является ли предмет ключом
+    // Проверяем, является ли предмет ключом //
     if (itemName.toLowerCase().includes("key") || itemName.toLowerCase().includes("ключ")) {
-        // Вызываем функцию, которая удалит ТОЛЬКО этот конкретный ключ
+        // Вызываем функцию, которая удалит ТОЛЬКО этот конкретный ключ //
         if (doorsMechanic.useKeyOnDoor(player, map, inventory, itemName)) {
             movement.map = map;
             activeEnemies.forEach(en => en.map = map);
             inventory.isOpen = false; 
-            return true; // Сообщаем инвентарю, что предмет использован успешно
+            return true; // Сообщаем инвентарю, CO предмет использован успешно //
         }
     }
     return false;
@@ -131,7 +131,7 @@ window.addEventListener("keydown", (e) => {
             if (checkPickUpItem()) return;
 
             // --- Logika Drzwi ---
-            ///// ИЗМЕНЕНО: Вызываем функцию проверки двери перед собой /////
+            ///// Вызываем функцию проверки двери перед собой /////
             if (doorsMechanic.tryOpenDoor(player, map, inventory)) {
                 movement.map = map; 
                 activeEnemies.forEach(en => en.map = map);
@@ -251,13 +251,49 @@ function initLevel(index, spawnX = null, spawnY = null) {
         movement.map = map;
     }
     
+    //////// KOLIZJA DLA CHEST //////
+    if (movement) {
+        if (Array.isArray(movement.solidTiles)) {
+            if (!movement.solidTiles.includes(2)) movement.solidTiles.push(2);
+            if (!movement.solidTiles.includes(10)) movement.solidTiles.push(10);
+        } else {
+            const originalUpdate = movement.update;
+            movement.update = function(enemies) {
+                ////// tymczasowo zamieniamy ID skrtzn na sciany przed obliczeniem kroku kolizji /////
+                const backupMap = this.map.map(row => row.map(tile => (tile === 2 || tile === 10) ? 1 : tile));
+                const realMap = this.map;
+                this.map = backupMap;
+                originalUpdate.call(this, enemies);
+                this.map = realMap;
+            };
+        }
+    }
+    
     fog = new Fog(maxWidth, map.length, tileS);
 
     camera = new CampaignCamera(canvas.width, canvas.height, maxWidth * tileS, map.length * tileS);
 }
 
 
-function draw() {  
+////////// ZMIENNE DO KONTROLI SZYBKOSCI KADROW  (FPS) //////////
+let fpsInterval = 1000 / 60; /////// OGRANICZAMY GRE DO 60 KADROW
+let then = performance.now();
+
+// function draw() {  
+function draw(timestamp) {  
+    
+    ////// uruchamiamy planowanie nastepnej klatki na samym poczatku funkcji ////
+    requestAnimationFrame(draw);
+
+    ////// obliczmy roznice czasu miedzy klatkami ////
+    let now = timestamp || performance.now();
+    let elapsed = now - then;
+
+    //// jesli minelo mniej czasu niz potrzeba na 60 fps (mniej niz ~16,6 ms) to pomijsamy klatke ///
+    if (elapsed < fpsInterval) return;
+
+    ///// korygujemy punkt odniesienia dl nastepnej klatki ////
+    then = now - (elapsed % fpsInterval);
     
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     
@@ -356,7 +392,7 @@ function draw() {
     }
     ctx.restore();
 
-    ////////////////// RYSOWANIE PRZEDMIOTOW NA PODLODZE //////////////////
+    //////////////// RYSOWANIE PRZEDMIOTOW NA PODLODZE //////////////////
     for (let item of droppedItems) {
         ctx.fillStyle = "white";
         ctx.strokeStyle = "yellow";
@@ -375,7 +411,7 @@ function draw() {
         enemy.draw(ctx);
     }
 
-    ////////////////// RYSOWANIE ANIMOWANEGO GRACZA /////////////////
+    //////////////// RYSOWANIE ANIMOWANEGO GRACZA /////////////////
     if (isInvulnerable) {
         ctx.globalAlpha = (Math.floor(Date.now() / 100) % 2 === 0) ? 0.3 : 1.0;
     }
@@ -390,7 +426,7 @@ function draw() {
 
     ctx.restore();
 
-    ////////////////// RYSOWANIE UI //////////////////
+    //////////////// RYSOWANIE UI //////////////////
     inventory.draw();
 
     if (minimap && fog) {
@@ -411,7 +447,7 @@ function draw() {
         ctx.textAlign = "left";
     }
 
-    ///////// RYSOWANIE HEARTS ////////
+    // /////// RYSOWANIE HEARTS ////////
     for (let i = 0; i < playerHealth; i++) {
         let heartSize = 50; 
         let gap = 10;       
@@ -420,7 +456,7 @@ function draw() {
         }
     }
 
-    /////// KRESKA STAMINY POD HEARTS //////
+    // ///// KRESKA STAMINY POD HEARTS //////
     if (movement) {
         let sWidth = 170;
         let sHeight = 12;
@@ -441,7 +477,7 @@ function draw() {
 
     pause.draw();
 
-    if (isDead) {                                            
+    if (isDead) {                                                                            
         if (deathAlpha < 1) deathAlpha += 0.01; 
         ctx.save();
         ctx.globalAlpha = deathAlpha;
@@ -450,7 +486,7 @@ function draw() {
 
         let imgW = 1536; 
         let imgH = 300; 
-                                                                                                              ////////        442          ////////
+                                                                                                                                                                                                            ////////        442          ////////
         if (deathImage.complete) {
             ctx.drawImage(deathImage, canvas.width/2 - imgW/2, canvas.height/2 - imgH/2, imgW, imgH);
         }
@@ -463,7 +499,7 @@ function draw() {
         ctx.restore();
     }
 
-    requestAnimationFrame(draw);
+    // requestAnimationFrame(draw);
 }
 
 initLevel(0);
