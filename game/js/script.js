@@ -25,6 +25,8 @@ const difficulty = params.get("diff") || "Normal";
     let movement;
     let fog; 
     let pauseSystem;
+    let timerInterval
+    let elapsedTime = 0;
 
     const canvas = document.getElementById("arcade");
     const ctx = canvas.getContext("2d");
@@ -141,10 +143,28 @@ function loadLevel(levelIndex, floorIndex) {
                 enemies.push(new Enemy(eData.startX, eData.startY, null, map, tileSize));
             }
         }
-    }
-}
+    } // Конец логики врагов
 
-    function checkTileEvents(isKeyPress = false) {
+    // ====================================================================
+    // --- ДОБАВЛЕННЫЙ КОД ТАЙМЕРА (БЫЛ ПРОПУЩЕН!) ---
+    // ====================================================================
+    elapsedTime = 0; // Сбрасываем время при загрузке уровня/этажа
+    
+    clearInterval(timerInterval); // Удаляем старый таймер, чтобы они не копились
+    
+    timerInterval = setInterval(() => {
+        // Если игра на паузе, игрок мертв или игра окончена — время застывает
+        if ((typeof pauseSystem !== 'undefined' && pauseSystem && pauseSystem.isPaused) || isDead || gameOver) {
+            return; 
+        }
+        
+        elapsedTime++; // Каждую секунду прибавляем 1
+    }, 1000);
+    // ====================================================================
+
+} // Самая последняя скобка функции loadLevel
+
+function checkTileEvents(isKeyPress = false) {
         let gridX = Math.floor((player.pixelX + tileSize / 2) / tileSize);
         let gridY = Math.floor((player.pixelY + tileSize / 2) / tileSize);
         if (!map[gridY] || map[gridY][gridX] === undefined) return;
@@ -157,11 +177,49 @@ function loadLevel(levelIndex, floorIndex) {
             player.pixelY = portal.targetY * tileSize;
             return;
         }
-        if (tile === 4) { hasKey = true; map[gridY][gridX] = 0; }
-        if (tile === 2 && hasKey) { 
-            gameOver = true; 
-            alert("Победа!"); 
-            window.location.href = "../index.html"; 
+
+        // Подбираем ключ
+        if (tile === 4) { 
+            hasKey = true; 
+            map[gridY][gridX] = 0; 
+        }
+
+        // Встаём на плитку выхода (плитка 2) с ключом и игра еще не закончилась
+        if (tile === 2 && hasKey && !gameOver) { 
+            gameOver = true; // Блокируем повторные вызовы
+            
+            clearInterval(timerInterval); // Останавливаем секундомер в памяти
+
+            // 1. Считаем финальное время
+            let minutes = Math.floor(elapsedTime / 60);
+            let seconds = elapsedTime % 60;
+            let formattedSeconds = seconds.toString().padStart(2, '0');
+            let finalTime = `${minutes}:${formattedSeconds}`;
+
+            let rank = "D";
+
+
+            if (elapsedTime <= 30) {
+                rank = "S";
+            } else if (elapsedTime <= 50) {
+                rank = "A";
+            } else if (elapsedTime <= 70) {
+                rank = "B";
+            } else if (elapsedTime <= 300) {
+                rank = "C";
+            } else {
+                rank = "D";
+            }
+
+            // 3. Выдаем триумфальное окно с рангом и временем
+            alert(
+                `You win\n\n` +
+                `Time: ${finalTime}\n` +
+                `Rank: ${rank}`
+            ); 
+            
+            // ПОТОМ ПОМЕНЯТЬ
+            window.location.href = "index.html";
         }
     }
 
