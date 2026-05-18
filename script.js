@@ -199,7 +199,7 @@ function setSetting(name) {
     label.className = "menu-item";
     label.textContent = "Controls";
 
-    // текст
+    // text
     const text = document.createElement("div");
     text.className = "menu-item";
     text.textContent = "Bro its just WASD and SHIFT, idk what do you wanna switch :/";
@@ -363,30 +363,35 @@ function finishIntro() {
   menu.style.display = ""; 
   setMenu("main"); 
   
-  //////// TYLKO PO TYM USUWAMY INTRO  ///////
+  //////X TYLKO PO TYM USUWAMY INTRO  ///////
   setTimeout(() => {
      if (introVideo) introVideo.remove();
   }, 100);
 }
 
-function startLoadingProcess() {
+function startLoadingProcess(forceFastSpeed = false) {
     
     ////////// PROCENT SETINGS /////////
     const rarity = {
-        fast: 50,    // wolna
-        medium: 40,  // srednia
-        slow: 10     // slow
+        fast: 60,    // wolna
+        medium: 45,  // srednia
+        slow: 5     // slow
     };
 
     let speedProfile;
-    const roll = Math.random() * 100; ////// losuje od 0 do 100 //////
-
-    if (roll <= rarity.fast) {
-        speedProfile = 1; 
-    } else if (roll <= (rarity.fast + rarity.medium)) {
-        speedProfile = 2; 
+    
+    if (forceFastSpeed) {
+        speedProfile = 1; ////// Принудительно включаем самый быстрый профиль /////
     } else {
-        speedProfile = 3; 
+        const roll = Math.random() * 100; ////// losuje od 0 do 100 //////
+
+        if (roll <= rarity.fast) {
+            speedProfile = 1; 
+        } else if (roll <= (rarity.fast + rarity.medium)) {
+            speedProfile = 2; 
+        } else {
+            speedProfile = 3; 
+        }
     }
 
     const overlay = document.createElement("div");
@@ -397,7 +402,7 @@ function startLoadingProcess() {
         cursor: default; overflow: hidden;
     `;
 
-    ///////////////// TWORZYMY OSOBNA WARSTWE DLA ROZMYTEGO TLA /////////////// (menu.png)
+    /////////////// TWORZYMY OSOBNA WARSTWE DLA ROZMYTEGO TLA /////////////// (menu.png)
     const blurBackground = document.createElement("div");
     blurBackground.style.cssText = `
         position: absolute; top: -10%; left: -10%; width: 120%; height: 120%;
@@ -479,4 +484,17 @@ function activateMusic() {
     music.play().catch(() => console.log("Autoplay blocked"));
     musicStarted = true;
   }
+}
+
+////// ПРОВЕРКА: ЕСЛИ МЫ ВЕРНУЛИСЬ ИЗ ИГРЫ — ПРОПУСКАЕМ ИНТРО //////
+if (sessionStorage.getItem("skipIntro") === "true") {
+    f11Overlay.remove();
+    introVideo.remove();
+    menu.style.display = ""; 
+    setMenu("main");
+    
+    // Запускаем штатный экран загрузки с принудительно высокой скоростью (speedProfile = 1)
+    startLoadingProcess(true);
+    
+    sessionStorage.removeItem("skipIntro"); // Сбрасываем флаг, чтобы при полном перезаходе интро снова работало
 }

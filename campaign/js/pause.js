@@ -80,6 +80,7 @@ export class Pause {
                 mouseY >= this.menuBtnY &&
                 mouseY <= this.menuBtnY + this.btnH
             ) {
+                sessionStorage.setItem("skipIntro", "true");
                 window.location.href = "../index.html"; 
             }
         });
@@ -134,7 +135,7 @@ export class Pause {
         ///// Название игры с учетом внутреннего отступа padding 50px ////
         this.ctx.font = "bold 25px 'Trebuchet MS', Gadget, sans-serif";
         ////// Можно менять число 60 ниже чтобы двигать "Zeg-Game" вверх или вниз /////
-        this.ctx.fillText("Zeg-Game", centerX, this.panelY + 95);
+        this.ctx.fillText("Project Z", centerX, this.panelY + 95);
 
         //////// Настройка пунктов меню //////////
         this.ctx.fillStyle = "white";

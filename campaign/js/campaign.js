@@ -29,8 +29,10 @@ let playerVisual = new Player(tileS); //////////////////// WIZUALIZACJA I ANIMAC
 let playerHealth = 3; 
 let isInvulnerable = false; ///// NIEZNISZCZALNOSC PO UDERZENIU /////
 
-const heartImage = new Image();
-heartImage.src = '../pictures/heart.png';
+const breakingHeart = new Image();
+breakingHeart.src = '../pictures/anim_heart.png'; 
+const ANIM_HEART_FRAMES = 15; 
+let breakingHeartsList = []; 
 
 /////////// OBRAZEK MAPY ///////////
 const mapIcon = new Image();
@@ -199,6 +201,7 @@ function resetGame() {
     isDead = false;
     deathAlpha = 0;
     playerHealth = 3;
+    breakingHeartsList = []; 
     inventory.items = []; //// PELNE WYCZYSZCZENIE INWENTARZA ///
     
     ////// PONOWIENIE STAMINY PO SMIERCI //////
@@ -289,7 +292,7 @@ function draw(timestamp) {
     let now = timestamp || performance.now();
     let elapsed = now - then;
 
-    //// jesli minelo mniej czasu niz potrzeba na 60 fps (mniej niz ~16,6 ms) to pomijsamy klatke ///
+    //// jesli minelo mindre czasu niz potrzeba na 60 fps (mniej niz ~16,6 ms) to pomijsamy klatke ///
     if (elapsed < fpsInterval) return;
 
     ///// korygujemy punkt odniesienia dl nastepnej klatki ////
@@ -297,7 +300,7 @@ function draw(timestamp) {
     
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     
-    /////////////////// BLOKUJEMYa RUCH JESLI UI OTWARTE, ПАУЗА, КАРТА LUB GRACZ NIE ZYJE ///////////////////
+    ////////////////... BLOKUJEMYa RUCH JESLI UI OTWARTE, ПАУЗА, КАРТА LUB GRACZ NIE ZYJE ///////////////////
     if (!inventory.isUIActive() && !isDead && !pause.isPaused && !minimap.isFullMap) {
         movement.keys = keys; ////////////////// PRZEKAZUJEMY KLAWISZE DO RUCHU //////////////////
         movement.update(activeEnemies);
@@ -319,7 +322,15 @@ function draw(timestamp) {
                 let dy = pCenterY - eCenterY;
                 let dist = Math.sqrt(dx * dx + dy * dy);
                 
-                if (dist < 60) { // Радиус столкновения
+                if (dist < 60) { //  Радиус столкновения
+                    if (playerHealth > 0) {
+                        breakingHeartsList.push({
+                            index: playerHealth - 1, 
+                            frame: 0,
+                            lastUpdate: performance.now()
+                        });
+                    }
+
                     playerHealth--;
                     if (playerHealth <= 0) {
                         isDead = true;
@@ -419,7 +430,7 @@ function draw(timestamp) {
     playerVisual.draw(ctx, player.pixelX, player.pixelY); 
     ctx.globalAlpha = 1.0; 
 
-    //////////  RYSUJEMY FogOfWar (ПОВЕРХ ВСЕГО) ////////////
+    //////////  RYSUJEMY FogOfWar (П ПОВЕРХ ВСЕГО) ////////////
     if (fog) {
         fog.draw(ctx, { x: camX, y: camY });
     }
@@ -448,11 +459,42 @@ function draw(timestamp) {
     }
 
     // /////// RYSOWANIE HEARTS ////////
+    let heartSize = 90; 
+    let gap = -23;       
+    let startX = -7;
+    let heartSpriteW = 48;
+    let heartSpriteH = 48;
+
     for (let i = 0; i < playerHealth; i++) {
-        let heartSize = 50; 
-        let gap = 10;       
-        if (heartImage.complete) {
-            ctx.drawImage(heartImage, 20 + (heartSize + gap) * i, 20, heartSize, heartSize);
+        if (breakingHeart.complete) {
+            ctx.drawImage(
+                breakingHeart,
+                0, 0, heartSpriteW, heartSpriteH, 
+                startX + (heartSize + gap) * i, 20, heartSize, heartSize
+            );
+        }
+    }
+
+    let nowTime = performance.now();
+    for (let i = breakingHeartsList.length - 1; i >= 0; i--) {
+        let bh = breakingHeartsList[i];
+        let hx = startX + (heartSize + gap) * bh.index;
+        let hy = 20;
+
+        if (breakingHeart.complete) {
+            ctx.drawImage(
+                breakingHeart,
+                bh.frame * heartSpriteW, 0, heartSpriteW, heartSpriteH, 
+                hx, hy, heartSize, heartSize 
+            );
+        }
+
+        if (nowTime - bh.lastUpdate > 50) { 
+            bh.frame++;
+            bh.lastUpdate = nowTime;
+            if (bh.frame >= ANIM_HEART_FRAMES) {
+                breakingHeartsList.splice(i, 1); 
+            }
         }
     }
 
@@ -461,7 +503,7 @@ function draw(timestamp) {
         let sWidth = 170;
         let sHeight = 12;
         let sX = 20;
-        let sY = 80; 
+        let sY = 20 + heartSize + 10; 
 
         ctx.fillStyle = "rgba(0, 0, 0, 0.5)";
         ctx.fillRect(sX, sY, sWidth, sHeight);
@@ -477,7 +519,7 @@ function draw(timestamp) {
 
     pause.draw();
 
-    if (isDead) {                                                                            
+    if (isDead) {                                                                                                                                                                                                                                                                                                                                                            
         if (deathAlpha < 1) deathAlpha += 0.01; 
         ctx.save();
         ctx.globalAlpha = deathAlpha;
@@ -486,7 +528,7 @@ function draw(timestamp) {
 
         let imgW = 1536; 
         let imgH = 300; 
-                                                                                                                                                                                                            ////////        442          ////////
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     ////////        442        ////////
         if (deathImage.complete) {
             ctx.drawImage(deathImage, canvas.width/2 - imgW/2, canvas.height/2 - imgH/2, imgW, imgH);
         }
